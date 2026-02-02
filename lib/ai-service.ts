@@ -14,16 +14,16 @@ const SYSTEM_PROMPT = `You are an expert resume writer and ATS optimization spec
 7. Don't force keywords where they don't fit naturally.
 
 **SUMMARY GUIDELINES**:
-- 2-3 sentences highlighting relevant experience for THIS specific role
-- Incorporate job title keywords naturally
-- Focus on years of experience, key skills, and notable achievements
+- **MANDATORY**: Start the first sentence by explicitly mentioning the target Job Title (e.g., "Results-oriented Data Analyst...").
+- 2-3 sentences highlighting relevant experience for THIS specific role.
+- Focus on years of experience, key skills, and notable achievements.
 
 **SKILLS GUIDELINES**:
 1. **MANDATORY**: Include ALL skills from the Base Resume.
-2. **JD INTEGRATION**: Aggressively extract and include ALL matching hard skills/keywords from the Job Description.
-3. **SOFT SKILLS**: You MUST create a category called "Soft Skills" and include 4-6 relevant soft skills found in the JD (e.g., "Communication", "Leadership", "Agile").
-4. **CATEGORIZATION**: Group into: Languages, Frameworks, Tools, Cloud/Infrastructure, Methodologies, Soft Skills.
-5. **NO DUPLICATES**: Do not list the same skill in multiple categories.
+2. **DATA ROLES**: If this is a data-related role, you MUST categorize and include these specifically: Analytical Skills, Anomaly Detection, Reconciliation, Advanced Excel, Trend Analysis, Forecasting, Data Mining, SQL Queries, Power Query, Power BI, Python, Azure, ETL, ERP.
+3. **SOFT SKILLS**: Create a "Soft Skills" category. Use **High-Level Professional Language** (e.g., use "Strategic Consultative Partnering" instead of "Communication", "Cross-Functional Consensus Building" instead of "Teamwork"). Do NOT use generic terms.
+4. **CATEGORIZATION**: Group ALL skills (Base + JD) into specific categories: Languages, Frameworks, Tools, Cloud/Infrastructure, Data & Analytics, Methodologies, Soft Skills.
+5. **NO DUMPING**: Do NOT create a "Other" or "Miscellaneous" category. Fit every skill into a named functional category.
 6. **ATS OPTIMIZATION**: Use the exact phrasing found in the JD.
 
 **CORE COMPETENCIES GUIDELINES**:
@@ -44,21 +44,21 @@ const SYSTEM_PROMPT = `You are an expert resume writer and ATS optimization spec
 
 Return ONLY valid JSON:
 {
-  "summary": "Professional summary tailored to role",
+  "summary": "Professional summary tailored to role...",
   "experience": [
     {
       "title": "Job Title (keep original from base resume)",
-      "company": "Company Name (keep original from base resume)",
-      "location": "City, State (REQUIRED - keep original from base resume)",
-      "startDate": "Month Year (keep original from base resume)",
-      "endDate": "Month Year or Present (keep original from base resume)",
-      "bullets": ["Substantive bullet with natural keyword integration"]
+      "company": "Company Name",
+      "location": "City, State",
+      "startDate": "Month Year",
+      "endDate": "Month Year",
+      "bullets": ["Substantive bullet..."]
     }
   ],
   "skills": ["Skill 1", "Skill 2"],
   "skillCategories": [
-    {"category": "Languages", "skills": ["Python", "JavaScript"]},
-    {"category": "Frameworks", "skills": ["React", "Node.js"]}
+    {"category": "Languages", "skills": ["Python"]},
+    {"category": "Data & Analytics", "skills": ["SQL", "Power BI"]}
   ],
   "education": [
     {
@@ -92,15 +92,13 @@ ${jobDescription.requiredSkills.slice(0, 10).join(', ')}
 ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
 
 **INSTRUCTIONS:**
-1. Reframe each bullet point to naturally include 2-3 relevant keywords where they fit
-2. Keep the candidate's actual achievements and metrics - just enhance the wording
-3. Make bullets substantive (fill the line) but not verbose
-4. Prioritize the high-priority keywords in bullets and summary
-5. Organize skills into logical categories (Languages, Tools, Soft Skills, etc.).
-6. ADD distinct "Soft Skills" category with relevant skills from JD.
-7. MAXIMIZE keyword match: Add any skill from the JD that fits the candidate's profile.
-8. Do NOT include graduation dates/years in education
-9. Sound like a human wrote it - natural, professional, not robotic`;
+1. **SUMMARY**: Start with "Experienced [Job Title]..." matching the target role.
+2. **DATA SKILLS**: If relevant, ensure inclusion of: Anomaly Detection, Reconciliation, Advanced Excel, Trend Analysis, Forecasting, Data Mining, SQL Queries, Power Query, Power BI, Python, Azure, ETL, ERP.
+3. **SOFT SKILLS**: Use executive-level phrasing (e.g. "Stakeholder Management").
+4. **CATEGORIZATION**: Sort ALL base skills + new JD skills into: Languages, Tools, Data & Analytics, Cloud, Soft Skills.
+5. Reframe bullets with JD keywords but keep actual metrics.
+6. NO duplicates.
+7. Sound professional and human.`;
 
   try {
     const response = await fetch('/api/generate', {
@@ -188,12 +186,22 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
       !tailoredSkillsSet.has(String(skill).toLowerCase().trim())
     );
 
-    // If there are missing skills, add them to a catch-all category
+    // If there are missing skills, try to fit them into existing categories or add to 'Tools'
     if (missingBaseSkills.length > 0) {
-      tailoredCategories.push({
-        category: 'Additional Skills',
-        skills: Array.from(new Set(missingBaseSkills)) // Remove duplicates
-      });
+      // Find a generic category to dump skills into if we can't classify them
+      let targetCategory = tailoredCategories.find(c =>
+        ['tools', 'technical skills', 'technologies', 'other'].includes(c.category.toLowerCase())
+      );
+
+      if (!targetCategory) {
+        // Create one if it doesn't exist
+        targetCategory = { category: 'Technical Skills', skills: [] };
+        tailoredCategories.push(targetCategory);
+      }
+
+      // Add missing skills to this target category
+      const uniqueMissing = Array.from(new Set(missingBaseSkills));
+      targetCategory.skills = [...targetCategory.skills, ...uniqueMissing];
     }
 
     // Ensure we never return empty categories if we have skills
