@@ -137,6 +137,25 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
       throw new Error('Failed to parse AI response. Please try again.');
     }
 
+    // Smart merge of skill categories to ensure NO base skill is lost
+    const tailoredCategories = tailoredData.skillCategories || [];
+    const tailoredSkillsSet = new Set(
+      tailoredCategories.flatMap((c: any) => c.skills || []).map((s: string) => s.toLowerCase().trim())
+    );
+
+    // Identify skills from base resume that are missing in the tailored categories
+    const missingBaseSkills = baseResume.skills.filter(skill =>
+      !tailoredSkillsSet.has(skill.toLowerCase().trim())
+    );
+
+    // If there are missing skills, add them to a catch-all category
+    if (missingBaseSkills.length > 0) {
+      tailoredCategories.push({
+        category: 'Additional Skills',
+        skills: Array.from(new Set(missingBaseSkills)) // Remove duplicates
+      });
+    }
+
     // Merge with base resume to preserve personal info and IDs
     const tailoredResume: BaseResume = {
       personal: baseResume.personal, // Keep original contact info
@@ -171,7 +190,7 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
         ...baseResume.skills,
         ...(tailoredData.skills || [])
       ])),
-      skillCategories: tailoredData.skillCategories || baseResume.skillCategories,
+      skillCategories: tailoredCategories,
       certifications: tailoredData.certifications || baseResume.certifications
     };
 
