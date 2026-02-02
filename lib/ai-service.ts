@@ -1,0 +1,251 @@
+// lib/ai-service.ts
+
+import { BaseResume, JobDescription } from '@/types/resume';
+
+const SYSTEM_PROMPT = `You are an expert resume writer and ATS optimization specialist. Tailor resumes to job descriptions while maintaining authenticity.
+
+**BULLET POINT GUIDELINES (CRITICAL)**:
+1. REFRAME, don't rewrite - Keep the candidate's actual experience but enhance wording to align with the job
+2. Naturally weave in 2-3 keywords from the job description per bullet where they fit contextually
+3. Each bullet should be substantive (80-150 characters) - fill the line with meaningful content
+4. Start with varied action verbs: Led, Developed, Implemented, Collaborated, Designed, Orchestrated, Streamlined, etc.
+5. Include metrics when present in original (e.g., "15%", "$2M", "50+ users")
+6. Sound human and conversational - avoid robotic or overly formal phrasing
+7. Don't force keywords where they don't fit naturally
+
+**SUMMARY GUIDELINES**:
+- 2-3 sentences highlighting relevant experience for THIS specific role
+- Incorporate job title keywords naturally
+- Focus on years of experience, key skills, and notable achievements
+
+**SKILLS GUIDELINES**:
+- Organize into categories: Languages, Frameworks, Tools, Cloud/Infrastructure, Methodologies
+- Prioritize skills mentioned in job description
+- Only include skills the candidate likely has based on their experience
+
+**EDUCATION GUIDELINES**:
+- Keep degree and institution only
+- Do NOT include graduation year/date - user will add if needed
+- Do NOT include GPA unless exceptional (3.8+) and recently graduated
+
+**GENERAL RULES**:
+- Never use em dashes (—) or en dashes (–), use hyphens (-) only
+- No AI-sounding phrases like "leveraging", "utilizing", "spearheading initiatives"
+- Maintain the candidate's actual job titles, companies, and dates
+
+Return ONLY valid JSON:
+{
+  "summary": "Professional summary tailored to role",
+  "experience": [
+    {
+      "title": "Job Title (keep original from base resume)",
+      "company": "Company Name (keep original from base resume)",
+      "location": "City, State (REQUIRED - keep original from base resume)",
+      "startDate": "Month Year (keep original from base resume)",
+      "endDate": "Month Year or Present (keep original from base resume)",
+      "bullets": ["Substantive bullet with natural keyword integration"]
+    }
+  ],
+  "skills": ["Skill 1", "Skill 2"],
+  "skillCategories": [
+    {"category": "Languages", "skills": ["Python", "JavaScript"]},
+    {"category": "Frameworks", "skills": ["React", "Node.js"]}
+  ],
+  "education": [
+    {
+      "degree": "Degree Name",
+      "institution": "School Name"
+    }
+  ],
+  "certifications": ["Certification 1"]
+}
+
+CRITICAL: Preserve ALL experience entries from the base resume with their exact title, company, location, and dates. Only modify the bullet points.`;
+
+export async function generateTailoredResume(
+  baseResume: BaseResume,
+  jobDescription: JobDescription
+): Promise<BaseResume> {
+  const userPrompt = `**BASE RESUME:**
+${JSON.stringify(baseResume, null, 2)}
+
+**TARGET JOB:**
+Title: ${jobDescription.jobTitle}
+Company: ${jobDescription.companyName}
+
+**JOB DESCRIPTION:**
+${jobDescription.text}
+
+**HIGH-PRIORITY KEYWORDS TO INTEGRATE:**
+${jobDescription.requiredSkills.slice(0, 10).join(', ')}
+
+**ADDITIONAL KEYWORDS:**
+${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
+
+**INSTRUCTIONS:**
+1. Reframe each bullet point to naturally include 2-3 relevant keywords where they fit
+2. Keep the candidate's actual achievements and metrics - just enhance the wording
+3. Make bullets substantive (fill the line) but not verbose
+4. Prioritize the high-priority keywords in bullets and summary
+5. Organize skills into logical categories based on the job requirements
+6. Do NOT include graduation dates/years in education
+7. Sound like a human wrote it - natural, professional, not robotic`;
+
+  try {
+    const response = await fetch('/api/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        max_tokens: 4000,
+        system: SYSTEM_PROMPT,
+        messages: [
+          {
+            role: 'user',
+            content: userPrompt
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'API request failed');
+    }
+
+    const data = await response.json();
+    const content = data.content[0].text;
+
+    // Parse the JSON response
+    let tailoredData;
+    try {
+      // Remove any markdown code blocks if present
+      const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      tailoredData = JSON.parse(cleaned);
+    } catch (parseError) {
+      console.error('JSON Parse Error:', parseError);
+      console.error('Raw response:', content);
+      throw new Error('Failed to parse AI response. Please try again.');
+    }
+
+    // Merge with base resume to preserve personal info and IDs
+    const tailoredResume: BaseResume = {
+      personal: baseResume.personal, // Keep original contact info
+      summary: tailoredData.summary || baseResume.summary,
+      experience: tailoredData.experience.map((exp: any, index: number) => {
+        // Find matching base experience by company name (more reliable than index)
+        const matchingBase = baseResume.experience.find(
+          (base) => base.company.toLowerCase() === exp.company?.toLowerCase()
+        ) || baseResume.experience[index];
+
+        return {
+          id: matchingBase?.id || `exp-${Date.now()}-${index}`,
+          title: exp.title || matchingBase?.title || '',
+          company: exp.company || matchingBase?.company || '',
+          // Always prefer base resume location since AI often drops it
+          location: matchingBase?.location || exp.location || '',
+          startDate: exp.startDate || matchingBase?.startDate || '',
+          endDate: exp.endDate || matchingBase?.endDate || '',
+          current: (exp.endDate || matchingBase?.endDate || '').toLowerCase().includes('present'),
+          bullets: exp.bullets || matchingBase?.bullets || []
+        };
+      }),
+      education: tailoredData.education.map((edu: any, index: number) => ({
+        id: baseResume.education[index]?.id || `edu-${Date.now()}-${index}`,
+        degree: edu.degree,
+        institution: edu.institution,
+        location: edu.location || baseResume.education[index]?.location || '',
+        graduationDate: edu.graduationDate || '', // Empty by default, user can add
+        gpa: edu.gpa || '' // Empty by default, user can add
+      })),
+      skills: tailoredData.skills || baseResume.skills,
+      skillCategories: tailoredData.skillCategories || baseResume.skillCategories,
+      certifications: tailoredData.certifications || baseResume.certifications
+    };
+
+    // Validate and clean the resume
+    return validateAndCleanResume(tailoredResume);
+  } catch (error) {
+    console.error('AI Service Error:', error);
+    throw error;
+  }
+}
+
+function validateAndCleanResume(resume: BaseResume): BaseResume {
+  // Remove em dashes and en dashes
+  const cleanText = (text: string): string => {
+    return text.replace(/—/g, '-').replace(/–/g, '-');
+  };
+
+  return {
+    ...resume,
+    summary: cleanText(resume.summary),
+    experience: resume.experience.map(exp => ({
+      ...exp,
+      title: cleanText(exp.title),
+      company: cleanText(exp.company),
+      bullets: exp.bullets.map(cleanText)
+    })),
+    education: resume.education.map(edu => ({
+      ...edu,
+      degree: cleanText(edu.degree),
+      institution: cleanText(edu.institution)
+    })),
+    skills: resume.skills.map(cleanText),
+    certifications: resume.certifications.map(cleanText)
+  };
+}
+
+export async function enhanceBulletPoint(
+  bulletPoint: string,
+  jobContext: string
+): Promise<string> {
+  const prompt = `Rewrite this resume bullet point to be more impactful and ATS-friendly for a ${jobContext} role:
+
+"${bulletPoint}"
+
+Requirements:
+- Start with a strong action verb
+- Include quantifiable results if possible
+- Use relevant keywords
+- Keep it concise (under 150 characters)
+- Sound professional and human (not AI-generated)
+- No em dashes or en dashes
+
+Return only the rewritten bullet point, nothing else.`;
+
+  try {
+    const response = await fetch('/api/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        max_tokens: 200,
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('API request failed');
+    }
+
+    const data = await response.json();
+    const enhanced = data.content[0].text.trim();
+
+    // Clean up any quotes or special characters
+    return enhanced
+      .replace(/^["']|["']$/g, '')
+      .replace(/—/g, '-')
+      .replace(/–/g, '-');
+  } catch (error) {
+    console.error('Error enhancing bullet point:', error);
+    return bulletPoint; // Return original on error
+  }
+}
