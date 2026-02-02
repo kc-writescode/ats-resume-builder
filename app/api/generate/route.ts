@@ -16,6 +16,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('Generating with Anthropic...');
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20240620',
+        model: 'claude-3-haiku-20240307', // Switch to Haiku for debugging/stability
         max_tokens,
         system,
         messages
@@ -32,9 +33,22 @@ export async function POST(request: NextRequest) {
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const errorBody = await response.text();
+      console.error('Anthropic API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorBody
+      });
+
+      let errorJson;
+      try {
+        errorJson = JSON.parse(errorBody);
+      } catch {
+        errorJson = { error: { message: errorBody } };
+      }
+
       return NextResponse.json(
-        { error: error.error?.message || 'API request failed' },
+        { error: errorJson.error?.message || `Anthropic Error: ${response.statusText}` },
         { status: response.status }
       );
     }
