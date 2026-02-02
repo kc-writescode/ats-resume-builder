@@ -69,43 +69,56 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
       }}
     >
       {/* Header - Centered */}
-      <div style={{ textAlign: 'center', marginBottom: '4pt' }}>
+      <div style={{ textAlign: 'center', marginBottom: '8pt' }}>
         <h1
           style={{
             fontFamily: template.fonts.heading,
-            fontSize: '14pt',
+            fontSize: '16pt',
             fontWeight: 'bold',
             color: template.colors.primary,
-            marginBottom: '2pt',
+            marginBottom: '4pt',
+            textTransform: 'uppercase',
+            letterSpacing: '1pt',
             ...editableStyle,
           }}
           {...editableProps('personal.name')}
         >
           {resume.personal.name}
         </h1>
-        <p style={{ fontSize: '9pt', color: template.colors.secondary }}>
+        <div style={{
+          fontSize: '9pt',
+          color: template.colors.secondary,
+          display: 'flex',
+          justifyContent: 'center',
+          gap: '12pt',
+          flexWrap: 'wrap'
+        }}>
           <span style={editableStyle} {...editableProps('personal.location')}>{resume.personal.location}</span>
-          {' | '}
+          <span style={{ color: template.colors.primary }}>•</span>
           <span style={editableStyle} {...editableProps('personal.phone')}>{resume.personal.phone}</span>
-          {' | '}
+          <span style={{ color: template.colors.primary }}>•</span>
           <span style={editableStyle} {...editableProps('personal.email')}>{resume.personal.email}</span>
           {resume.personal.linkedin && (
             <>
-              {' | '}
+              <span style={{ color: template.colors.primary }}>•</span>
               <span style={editableStyle} {...editableProps('personal.linkedin')}>{resume.personal.linkedin}</span>
             </>
           )}
-        </p>
+        </div>
       </div>
 
-      <hr style={{ border: 'none', borderTop: `1px solid ${template.colors.primary}`, margin: '8pt 0' }} />
+      <hr style={{ border: 'none', borderTop: `1px solid ${template.colors.primary}`, margin: '4pt 0 8pt 0' }} />
 
       {/* Professional Summary */}
       {resume.summary && (
-        <div style={{ marginBottom: '6pt' }}>
+        <div style={{ marginBottom: '8pt' }}>
           <h2 style={sectionHeaderStyle}>Professional Summary</h2>
-          <p
-            style={{ textAlign: 'justify', ...editableStyle }}
+          <div
+            style={{
+              textAlign: 'justify',
+              lineHeight: '1.3',
+              ...editableStyle
+            }}
             {...editableHtmlProps('summary')}
             dangerouslySetInnerHTML={{ __html: resume.summary }}
           />
@@ -114,14 +127,13 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
 
       {/* Core Competencies - single line pipe-separated */}
       {resume.coreCompetencies && (Array.isArray(resume.coreCompetencies) ? resume.coreCompetencies.length > 0 : resume.coreCompetencies) && (
-        <div style={{ marginBottom: '6pt' }}>
+        <div style={{ marginBottom: '8pt' }}>
           <h2 style={sectionHeaderStyle}>Core Competencies</h2>
           <p
             style={{
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              fontSize: resume.coreCompetencies && Array.isArray(resume.coreCompetencies) && resume.coreCompetencies.length > 8 ? '9pt' : '10pt',
+              fontSize: '10pt',
+              fontWeight: '500',
+              textAlign: 'center',
               ...editableStyle
             }}
             {...editableProps('coreCompetencies')}
@@ -134,25 +146,28 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
       )}
 
       {/* Technical Skills - ATS optimized categorized format */}
-      <div style={{ marginBottom: '6pt' }}>
+      <div style={{ marginBottom: '8pt' }}>
         <h2 style={sectionHeaderStyle}>Technical Skills</h2>
         {skillCategories ? (
-          <div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2pt' }}>
             {skillCategories.map((cat, idx) => (
-              <p key={idx} style={{ marginBottom: '1pt', textAlign: 'justify' }}>
+              <div key={idx} style={{ textAlign: 'justify', display: 'flex', gap: '4pt', alignItems: 'flex-start' }}>
                 <strong
-                  style={editableStyle}
+                  style={{
+                    minWidth: '140pt',
+                    ...editableStyle
+                  }}
                   {...editableProps(`skillCategories.${idx}.category`)}
                 >
                   {cat.category}:
-                </strong>{' '}
+                </strong>
                 <span
                   style={editableStyle}
                   {...editableProps(`skillCategories.${idx}.skills`)}
                 >
                   {cat.skills.join(', ')}
                 </span>
-              </p>
+              </div>
             ))}
           </div>
         ) : (

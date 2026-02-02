@@ -15,6 +15,7 @@ const SYSTEM_PROMPT = `You are an expert resume writer and ATS optimization spec
 
 **SUMMARY GUIDELINES**:
 - **NARRATIVE**: Create a unifying theme/value proposition (e.g., "Data Engineer specializing in scalable healthcare platforms...").
+- **CONCISENESS**: Break into 2-3 concise, focused sentences. AVOID large blocks of text.
 - **SPECIFICITY**: Use exact years (e.g., "5 years", not "5+ years").
 - **HARD SKILLS**: Integrate top 3 hard skills immediately.
 - **NO FLUFF**: BAN generic phrases like "adept at delivering actionable insights" or "driving data-centric initiatives". Be specific: "delivering real-time clinical insights".
@@ -24,16 +25,17 @@ const SYSTEM_PROMPT = `You are an expert resume writer and ATS optimization spec
 1. **CATEGORIZATION**: Group into these SPECIFIC categories: 
    - For AI/ML Roles: 'Programming Languages', 'Machine Learning & AI Algorithms', 'Generative AI & Large Language Models', 'MLOps & ML Engineering', 'Analytical & Development Tools', 'Databases & Data Stores', 'Vector Databases', 'Big Data & Streaming Frameworks', 'Cloud Platforms & DevOps', 'Data Visualization & BI', 'Version Control & CI/CD', 'Operating Systems', 'Security, Privacy & Governance'.
    - For General Tech Roles: 'Cloud Platforms', 'Data Processing & Orchestration', 'Databases & Warehousing', 'BI & Visualization', 'Languages', 'DevOps & IaC', 'Soft Skills'.
-2. **DEDUPLICATION**: MERGE redundant terms. Use standard industry terms:
+2. **FORMAT CONSISTENCY**: Use consistent formatting (Colons for categories, commas for individual skills). AVOID mixing formats or dense paragraphs.
+3. **DEDUPLICATION**: MERGE redundant terms. Use standard industry terms:
    - Use "SQL" (not "Sql" or "sql").
    - Use "GitHub" (merge "Git" and "GitHub").
    - Use "Airflow" (merge "Apache Airflow" and "Airflow").
    - Use "Tableau" (merge "Tableau Process").
    - Use "GCP" (not "Platform (GCP)").
    - For AI: Use "LLMs", "RAG", "Fine-Tuning", "Vector Search" (merge similar terms).
-3. **DENSITY**: Limit to 8-10 most relevant skills per category. Do not dump every tool ever used.
-4. **SOFT SKILLS**: Use unique executive phrasing NOT found in the summary.
-5. **MANDATORY**: Include all base resume skills but categorize them strictly.
+4. **DENSITY**: Limit to 8-10 most relevant skills per category. Do not dump every tool ever used.
+5. **SOFT SKILLS**: Use unique executive phrasing NOT found in the summary.
+6. **MANDATORY**: Include all base resume skills but categorize them strictly.
 
 **CORE COMPETENCIES GUIDELINES**:
 1. **FOCUS**: High-Level Architectural Concepts and Domain Expertise (e.g. "Scalable Data Pipelines", "LLM Orchestration", "Predictive Analytics Systems").
@@ -43,9 +45,9 @@ const SYSTEM_PROMPT = `You are an expert resume writer and ATS optimization spec
 5. Max 8-10 top-tier technical keywords separated by pipes.
 
 **EDUCATION GUIDELINES**:
-- Keep degree and institution only
-- Do NOT include graduation year/date - user will add if needed
-- Do NOT include GPA unless exceptional (3.8+) and recently graduated
+- Include degree, institution, and graduation date.
+- Include GPA only if notable (3.8+) or recently graduated.
+- Highlighting relevant academic projects or theses is encouraged for research-heavy roles.
 
 **GENERAL RULES**:
 - **DATES**: Use "Present" for current roles (NOT "Till Date").
@@ -73,7 +75,9 @@ Return ONLY valid JSON:
   "education": [
     {
       "degree": "Degree Name",
-      "institution": "School Name"
+      "institution": "School Name",
+      "graduationDate": "Year or Month Year",
+      "gpa": "GPA (optional)"
     }
   ],
   "projects": [
@@ -118,14 +122,16 @@ ${jobDescription.requiredSkills.slice(0, 10).join(', ')}
 ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
 
 **INSTRUCTIONS:**
-1. **SUMMARY**: Construct a high-impact professional summary. Start with "Experienced [Target Job Title] with [Number] years of experience...". Integrate top hard skills immediately. Focus on VALUE added to the company.
-2. **AI/ML SKILLS**: If relevant, ensure inclusion of keywords like: LLMs, RAG, Prompt Engineering, LangChain, LlamaIndex, Fine-Tuning (LoRA), Vector Search, Model Deployment, MLOps, MLflow, PyTorch, TensorFlow, Scikit-learn, Transformers, Computer Vision, NLP.
-3. **SOFT SKILLS**: No generic terms. Use phrases like "Cross-functional Leadership", "Strategic Problem Solving".
-4. **CATEGORIZATION**: Group skills into these categories: ${skillCategories}.
-5. **SKILL BREAKDOWN**: Break down broad skills into specific tools, libraries, or sub-concepts in parentheses (e.g., "Python (NumPy, SciPy, Pandas)", "Generative AI (LLMs, RAG, Fine-tuning)").
-6. **BULLETS**: ENHANCE with diverse verbs (Architected, Engineered, Spearheaded). No "Built" repetition. Clarify metrics.
-7. NO duplicates.
-8. Sound professional and human.`;
+1. **SUMMARY**: Construct a high-impact professional summary. Start with "Experienced [Target Job Title] with [Number] years of experience...". Integrate top hard skills immediately. Focus on VALUE added to the company. Keep it to 2-3 concise sentences.
+2. **CAREER NARRATIVE**: Create a strong narrative of career progression—from foundational software engineering to applied research to leading specialized architecture (e.g., GenAI). Highlight increasing responsibility and strategic influence.
+3. **ROLE TAILORING**: Tailor the content sharply for ${jobDescription.jobTitle}. Emphasize core competencies that align directly with this specific target role.
+4. **AI/ML SKILLS**: If relevant, ensure inclusion of keywords like: LLMs, RAG, Prompt Engineering, LangChain, LlamaIndex, Fine-Tuning (LoRA), Vector Search, Model Deployment, MLOps, MLflow, PyTorch, TensorFlow, Scikit-learn, Transformers, Computer Vision, NLP.
+5. **SOFT SKILLS**: No generic terms. Use phrases like "Cross-functional Leadership", "Strategic Problem Solving".
+6. **CATEGORIZATION**: Group skills into these categories: ${skillCategories}.
+7. **SKILL BREAKDOWN**: Break down broad skills into specific tools, libraries, or sub-concepts in parentheses (e.g., "Python (NumPy, SciPy, Pandas)", "Generative AI (LLMs, RAG, Fine-tuning)").
+8. **BULLETS**: ENHANCE with diverse verbs (Architected, Engineered, Spearheaded). No "Built" repetition. Clarify metrics.
+9. NO duplicates.
+10. Sound professional and human.`;
 
   try {
     const response = await fetch('/api/generate', {
