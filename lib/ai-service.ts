@@ -5,13 +5,13 @@ import { BaseResume, JobDescription } from '@/types/resume';
 const SYSTEM_PROMPT = `You are an expert resume writer and ATS optimization specialist. Tailor resumes to job descriptions while maintaining authenticity.
 
 **BULLET POINT GUIDELINES (CRITICAL)**:
-1. REFRAME using high-impact keywords from the JD - Keep the core experience but pivot the wording to match the target role.
-2. Naturally weave in 2-3 specific keywords from the job description per bullet where they fit contextually.
-3. Each bullet should be substantive (80-150 characters) and result-oriented.
-4. Start with varied, strong action verbs.
-5. Include metrics when present in original (e.g., "15%", "$2M", "50+ users").
-6. Sound human and conversational.
-7. Don't force keywords where they don't fit naturally.
+1. **PRESERVE & ENHANCE**: You must NOT remove any bullet points from the base resume. Reframe them to differentiate and include high-impact keywords, but keep the core message and metrics.
+2. **ADD MISSING IMPACT**: You MAY add 1-2 new bullet points per role if the Job Description emphasizes a skill the candidate has but didn't highlight.
+3. **KEYWORDS**: Naturally weave in 2-3 specific keywords from the job description per bullet where they fit contextually.
+4. **FORMAT**: Start with varied, strong action verbs.
+5. **METRICS**: PRESERVE all existing metrics.
+6. **TONE**: Sound human and conversational.
+7. **DO NOT REMOVE**: Never reduce the number of bullet points given in the base resume.
 
 **SUMMARY GUIDELINES**:
 - **MANDATORY**: Start the first sentence by explicitly mentioning the target Job Title (e.g., "Results-oriented Data Analyst...").
@@ -69,7 +69,7 @@ Return ONLY valid JSON:
   "certifications": ["Certification 1"]
 }
 
-CRITICAL: Preserve ALL experience entries from the base resume with their exact title, company, location, and dates. Only modify the bullet points.`;
+CRITICAL: Preserve ALL experience entries from the base resume with their exact title, company, location, and dates. Preserve ALL original bullet points (enhanced/reframed) and ADD new ones where relevant.`;
 
 export async function generateTailoredResume(
   baseResume: BaseResume,
@@ -96,7 +96,7 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
 2. **DATA SKILLS**: If relevant, ensure inclusion of: Anomaly Detection, Reconciliation, Advanced Excel, Trend Analysis, Forecasting, Data Mining, SQL Queries, Power Query, Power BI, Python, Azure, ETL, ERP.
 3. **SOFT SKILLS**: Use executive-level phrasing (e.g. "Stakeholder Management").
 4. **CATEGORIZATION**: Sort ALL base skills + new JD skills into: Languages, Tools, Data & Analytics, Cloud, Soft Skills.
-5. Reframe bullets with JD keywords but keep actual metrics.
+5. **BULLETS**: ENHANCE existing bullets with JD keywords. DO NOT remove any base resume bullets. ADD new bullets if relevant to show fit.
 6. NO duplicates.
 7. Sound professional and human.`;
 

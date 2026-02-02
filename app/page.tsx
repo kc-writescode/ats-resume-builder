@@ -48,6 +48,9 @@ export default function Home() {
       // Extract job details
       const jobDescription = extractKeywordsFromJobDescription(jobDescriptionText);
 
+      console.log('Generating resume with base skills:', baseResume.skills);
+      console.log('Base resume skill categories:', baseResume.skillCategories);
+
       // Generate tailored resume using AI
       const tailoredContent = await generateTailoredResume(
         baseResume,
@@ -136,8 +139,8 @@ export default function Home() {
             <button
               onClick={() => setActiveTab('setup')}
               className={`px-6 py-2 rounded-md font-medium transition-all ${activeTab === 'setup'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-gray-600 hover:text-gray-900'
                 }`}
             >
               1. Base Resume
@@ -146,10 +149,10 @@ export default function Home() {
               onClick={() => setActiveTab('generate')}
               disabled={!baseResume}
               className={`px-6 py-2 rounded-md font-medium transition-all ${activeTab === 'generate'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : baseResume
-                    ? 'text-gray-600 hover:text-gray-900'
-                    : 'text-gray-300 cursor-not-allowed'
+                ? 'bg-blue-600 text-white shadow-md'
+                : baseResume
+                  ? 'text-gray-600 hover:text-gray-900'
+                  : 'text-gray-300 cursor-not-allowed'
                 }`}
             >
               2. Generate
@@ -158,10 +161,10 @@ export default function Home() {
               onClick={() => setActiveTab('review')}
               disabled={!generatedResume}
               className={`px-6 py-2 rounded-md font-medium transition-all ${activeTab === 'review'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : generatedResume
-                    ? 'text-gray-600 hover:text-gray-900'
-                    : 'text-gray-300 cursor-not-allowed'
+                ? 'bg-blue-600 text-white shadow-md'
+                : generatedResume
+                  ? 'text-gray-600 hover:text-gray-900'
+                  : 'text-gray-300 cursor-not-allowed'
                 }`}
             >
               3. Review & Export
