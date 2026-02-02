@@ -1,7 +1,5 @@
-
 import { NextRequest, NextResponse } from 'next/server';
-import HeadlessPdfParser from 'pdf-parse';
-const pdf = HeadlessPdfParser;
+const pdf = require('pdf-parse/lib/pdf-parse.js');
 import mammoth from 'mammoth';
 
 export const dynamic = 'force-dynamic';
