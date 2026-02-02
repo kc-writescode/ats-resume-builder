@@ -138,14 +138,30 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
     }
 
     // Smart merge of skill categories to ensure NO base skill is lost
-    const tailoredCategories = tailoredData.skillCategories || [];
-    const tailoredSkillsSet = new Set(
-      tailoredCategories.flatMap((c: any) => c.skills || []).map((s: string) => s.toLowerCase().trim())
-    );
+    let tailoredCategories: any[] = [];
+    if (Array.isArray(tailoredData.skillCategories)) {
+      tailoredCategories = [...tailoredData.skillCategories];
+    } else {
+      // Fallback if AI returns invalid structure
+      console.warn('AI returned invalid skillCategories structure:', tailoredData.skillCategories);
+    }
+
+    // Safely extract generated skills for comparison
+    const tailoredSkillsSet = new Set<string>();
+    try {
+      tailoredCategories.forEach(cat => {
+        if (cat && Array.isArray(cat.skills)) {
+          cat.skills.forEach((s: string) => tailoredSkillsSet.add(String(s).toLowerCase().trim()));
+        }
+      });
+    } catch (e) {
+      console.warn('Error processing tailored skills:', e);
+    }
 
     // Identify skills from base resume that are missing in the tailored categories
-    const missingBaseSkills = baseResume.skills.filter(skill =>
-      !tailoredSkillsSet.has(skill.toLowerCase().trim())
+    const baseSkills = Array.isArray(baseResume.skills) ? baseResume.skills : [];
+    const missingBaseSkills = baseSkills.filter(skill =>
+      !tailoredSkillsSet.has(String(skill).toLowerCase().trim())
     );
 
     // If there are missing skills, add them to a catch-all category
@@ -153,6 +169,14 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
       tailoredCategories.push({
         category: 'Additional Skills',
         skills: Array.from(new Set(missingBaseSkills)) // Remove duplicates
+      });
+    }
+
+    // Ensure we never return empty categories if we have skills
+    if (tailoredCategories.length === 0 && baseSkills.length > 0) {
+      tailoredCategories.push({
+        category: 'Technical Skills',
+        skills: baseSkills
       });
     }
 
