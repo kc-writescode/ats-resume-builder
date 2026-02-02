@@ -149,37 +149,40 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
       <div style={{ marginBottom: '8pt' }}>
         <h2 style={sectionHeaderStyle}>Technical Skills</h2>
         {skillCategories && skillCategories.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '3pt' }}>
-            {skillCategories.map((cat, idx) => (
-              <div key={idx} style={{
-                textAlign: 'justify',
-                display: 'grid',
-                gridTemplateColumns: '140pt 1fr',
-                gap: '8pt',
-                alignItems: 'baseline'
-              }}>
-                <strong
-                  style={{
-                    fontFamily: template.fonts.heading,
-                    fontSize: '9pt',
-                    ...editableStyle
-                  }}
-                  {...editableProps(`skillCategories.${idx}.category`)}
-                >
-                  {cat.category}:
-                </strong>
-                <span
-                  style={{
-                    fontSize: '9pt',
-                    ...editableStyle
-                  }}
-                  {...editableProps(`skillCategories.${idx}.skills`)}
-                >
-                  {cat.skills.join(', ')}
-                </span>
-              </div>
-            ))}
-          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+            <tbody>
+              {skillCategories.map((cat, idx) => (
+                <tr key={idx} style={{ verticalAlign: 'baseline' }}>
+                  <td style={{ width: '140pt', padding: '1pt 0' }}>
+                    <strong
+                      style={{
+                        fontFamily: template.fonts.heading,
+                        fontSize: '9pt',
+                        display: 'block',
+                        ...editableStyle
+                      }}
+                      {...editableProps(`skillCategories.${idx}.category`)}
+                    >
+                      {cat.category}:
+                    </strong>
+                  </td>
+                  <td style={{ padding: '1pt 0 1pt 8pt' }}>
+                    <span
+                      style={{
+                        fontSize: '9pt',
+                        display: 'block',
+                        textAlign: 'justify',
+                        ...editableStyle
+                      }}
+                      {...editableProps(`skillCategories.${idx}.skills`)}
+                    >
+                      {cat.skills.join(', ')}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         ) : (
           <p
             style={{ textAlign: 'justify', fontSize: '9pt', ...editableStyle }}
