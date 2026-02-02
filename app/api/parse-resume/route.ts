@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import mammoth from 'mammoth';
+import PDFParser from 'pdf2json';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,11 +21,15 @@ export async function POST(request: NextRequest) {
         let text = '';
 
         if (file.type === 'application/pdf') {
-            // Dynamic import to avoid build issues with CJS/ESM compatibility
-            const pdfModule = await import('pdf-parse');
-            const pdf = (pdfModule as any).default || pdfModule;
-            const data = await pdf(buffer);
-            text = data.text;
+            const pdfParser = new PDFParser(null, 1);
+
+            text = await new Promise((resolve, reject) => {
+                pdfParser.on("pdfParser_dataError", (errData: any) => reject(errData.parserError));
+                pdfParser.on("pdfParser_dataReady", () => {
+                    resolve(pdfParser.getRawTextContent());
+                });
+                pdfParser.parseBuffer(buffer);
+            });
         } else if (
             file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
             file.name.endsWith('.docx')
