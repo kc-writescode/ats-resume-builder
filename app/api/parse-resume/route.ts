@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
         let text = '';
 
         if (file.type === 'application/pdf') {
-            const pdfParser = new PDFParser(null, 1);
+            const pdfParser = new PDFParser(null, true);
 
             text = await new Promise((resolve, reject) => {
                 pdfParser.on("pdfParser_dataError", (errData: any) => reject(errData.parserError));
