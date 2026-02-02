@@ -5,13 +5,13 @@ import { BaseResume, JobDescription } from '@/types/resume';
 const SYSTEM_PROMPT = `You are an expert resume writer and ATS optimization specialist. Tailor resumes to job descriptions while maintaining authenticity.
 
 **BULLET POINT GUIDELINES (CRITICAL)**:
-1. REFRAME, don't rewrite - Keep the candidate's actual experience but enhance wording to align with the job
-2. Naturally weave in 2-3 keywords from the job description per bullet where they fit contextually
-3. Each bullet should be substantive (80-150 characters) - fill the line with meaningful content
-4. Start with varied action verbs: Led, Developed, Implemented, Collaborated, Designed, Orchestrated, Streamlined, etc.
-5. Include metrics when present in original (e.g., "15%", "$2M", "50+ users")
-6. Sound human and conversational - avoid robotic or overly formal phrasing
-7. Don't force keywords where they don't fit naturally
+1. REFRAME using high-impact keywords from the JD - Keep the core experience but pivot the wording to match the target role.
+2. Naturally weave in 2-3 specific keywords from the job description per bullet where they fit contextually.
+3. Each bullet should be substantive (80-150 characters) and result-oriented.
+4. Start with varied, strong action verbs.
+5. Include metrics when present in original (e.g., "15%", "$2M", "50+ users").
+6. Sound human and conversational.
+7. Don't force keywords where they don't fit naturally.
 
 **SUMMARY GUIDELINES**:
 - 2-3 sentences highlighting relevant experience for THIS specific role
@@ -19,9 +19,10 @@ const SYSTEM_PROMPT = `You are an expert resume writer and ATS optimization spec
 - Focus on years of experience, key skills, and notable achievements
 
 **SKILLS GUIDELINES**:
-- Organize into categories: Languages, Frameworks, Tools, Cloud/Infrastructure, Methodologies
-- Prioritize skills mentioned in job description
-- Only include skills the candidate likely has based on their experience
+- CRITICAL: You MUST include ALL skills listed in the Base Resume. Do not remove any.
+- ADD high-impact skills required by the Job Description if they are relevant to the candidate's background.
+- Organize into categories: Languages, Frameworks, Tools, Cloud/Infrastructure, Methodologies.
+- Ensure the final skills list is a superset of the base skills.
 
 **EDUCATION GUIDELINES**:
 - Keep degree and institution only
@@ -166,7 +167,10 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
         graduationDate: edu.graduationDate || '', // Empty by default, user can add
         gpa: edu.gpa || '' // Empty by default, user can add
       })),
-      skills: tailoredData.skills || baseResume.skills,
+      skills: Array.from(new Set([
+        ...baseResume.skills,
+        ...(tailoredData.skills || [])
+      ])),
       skillCategories: tailoredData.skillCategories || baseResume.skillCategories,
       certifications: tailoredData.certifications || baseResume.certifications
     };
@@ -330,11 +334,11 @@ export async function parseResumeFromText(text: string): Promise<BaseResume> {
     // Clean and parse JSON
     const jsonStart = content.indexOf('{');
     const jsonEnd = content.lastIndexOf('}');
-    
+
     if (jsonStart === -1 || jsonEnd === -1) {
       throw new Error('No JSON object found in response');
     }
-    
+
     const jsonString = content.substring(jsonStart, jsonEnd + 1);
     const parsed = JSON.parse(jsonString);
 
