@@ -7,6 +7,11 @@ import {
   TextRun,
   AlignmentType,
   LevelFormat,
+  Table,
+  TableRow,
+  TableCell,
+  WidthType,
+  BorderStyle,
 } from 'docx';
 import { BaseResume } from '@/types/resume';
 import { getTemplate } from './templates';
@@ -107,7 +112,7 @@ export async function generateDOCX(
 ): Promise<Blob> {
   const template = getTemplate(templateId);
   const styles = defaultStyles;
-  
+
   // Convert inches to DXA (1 inch = 1440 DXA)
   const margins = {
     top: template.margins.top * 1440,
@@ -130,24 +135,24 @@ export async function generateDOCX(
       children: [
         // Header with name and contact info
         ...createHeader(resume, styles),
-        
+
         // Professional Summary
         ...createSummarySection(resume, styles),
-        
+
         // Experience
         ...createExperienceSection(resume, styles),
-        
+
         // Education
         ...createEducationSection(resume, styles),
-        
+
         // Skills
         ...createSkillsSection(resume, styles),
-        
+
         // Certifications (if any)
         ...createCertificationsSection(resume, styles)
       ]
     }],
-    
+
     numbering: {
       config: [{
         reference: 'bullets',
@@ -243,7 +248,7 @@ function createSummarySection(resume: BaseResume, styles: typeof defaultStyles):
 
 function createExperienceSection(resume: BaseResume, styles: any): Paragraph[] {
   const paragraphs: Paragraph[] = [];
-  
+
   paragraphs.push(
     new Paragraph({
       spacing: { before: styles.spacing.beforeSection, after: 120 },
@@ -257,7 +262,7 @@ function createExperienceSection(resume: BaseResume, styles: any): Paragraph[] {
       ]
     })
   );
-  
+
   resume.experience.forEach((exp, index) => {
     // Job title and company
     paragraphs.push(
@@ -325,13 +330,13 @@ function createExperienceSection(resume: BaseResume, styles: any): Paragraph[] {
       );
     });
   });
-  
+
   return paragraphs;
 }
 
-function createEducationSection(resume: BaseResume, styles: any): Paragraph[] {
-  const paragraphs: Paragraph[] = [];
-  
+function createEducationSection(resume: BaseResume, styles: any): (Paragraph | Table)[] {
+  const paragraphs: (Paragraph | Table)[] = [];
+
   paragraphs.push(
     new Paragraph({
       spacing: { before: styles.spacing.beforeSection, after: 120 },
@@ -345,7 +350,7 @@ function createEducationSection(resume: BaseResume, styles: any): Paragraph[] {
       ]
     })
   );
-  
+
   resume.education.forEach((edu, index) => {
     paragraphs.push(
       new Paragraph({
@@ -382,14 +387,14 @@ function createEducationSection(resume: BaseResume, styles: any): Paragraph[] {
       })
     );
   });
-  
+
   return paragraphs;
 }
 
-function createSkillsSection(resume: BaseResume, styles: any): Paragraph[] {
+function createSkillsSection(resume: BaseResume, styles: any): (Paragraph | Table)[] {
   if (resume.skills.length === 0 && (!resume.skillCategories || resume.skillCategories.length === 0)) return [];
 
-  const paragraphs: Paragraph[] = [];
+  const paragraphs: (Paragraph | Table)[] = [];
 
   paragraphs.push(
     new Paragraph({
@@ -407,26 +412,55 @@ function createSkillsSection(resume: BaseResume, styles: any): Paragraph[] {
 
   // Use categorized skills if available
   if (resume.skillCategories && resume.skillCategories.length > 0) {
-    resume.skillCategories.forEach(cat => {
-      paragraphs.push(
-        new Paragraph({
-          spacing: { after: 60 },
-          children: [
-            new TextRun({
-              text: `${sanitizeForATS(cat.category)}: `,
-              size: styles.fonts.body.size * 2,
-              font: styles.fonts.body.font,
-              bold: true
-            }),
-            new TextRun({
-              text: sanitizeForATS(cat.skills.join(', ')),
-              size: styles.fonts.body.size * 2,
-              font: styles.fonts.body.font
-            })
-          ]
-        })
-      );
-    });
+    paragraphs.push(
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: {
+          top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+          bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+          left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+          right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+          insideHorizontal: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+          insideVertical: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+        },
+        rows: resume.skillCategories.map(cat => (
+          new TableRow({
+            children: [
+              new TableCell({
+                width: { size: 2800, type: WidthType.DXA }, // Approx 1.94 inches (matches 140pt)
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: `${sanitizeForATS(cat.category)}:`,
+                        size: styles.fonts.body.size * 2,
+                        font: styles.fonts.body.font,
+                        bold: true
+                      })
+                    ]
+                  })
+                ]
+              }),
+              new TableCell({
+                width: { size: 7200, type: WidthType.DXA }, // Remaining width
+                children: [
+                  new Paragraph({
+                    alignment: AlignmentType.JUSTIFIED,
+                    children: [
+                      new TextRun({
+                        text: sanitizeForATS(cat.skills.join(', ')),
+                        size: styles.fonts.body.size * 2,
+                        font: styles.fonts.body.font
+                      })
+                    ]
+                  })
+                ]
+              })
+            ]
+          })
+        ))
+      })
+    );
     return paragraphs;
   }
 
@@ -449,9 +483,9 @@ function createSkillsSection(resume: BaseResume, styles: any): Paragraph[] {
 
 function createCertificationsSection(resume: BaseResume, styles: any): Paragraph[] {
   if (resume.certifications.length === 0) return [];
-  
+
   const paragraphs: Paragraph[] = [];
-  
+
   paragraphs.push(
     new Paragraph({
       spacing: { before: styles.spacing.beforeSection, after: 120 },
@@ -465,7 +499,7 @@ function createCertificationsSection(resume: BaseResume, styles: any): Paragraph
       ]
     })
   );
-  
+
   resume.certifications.forEach(cert => {
     paragraphs.push(
       new Paragraph({

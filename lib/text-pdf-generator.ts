@@ -406,32 +406,42 @@ function renderResume(ctx: PDFContext, resume: BaseResume): void {
   writeSectionHeader(ctx, 'Technical Skills');
 
   if (skillCategories) {
+    const skillsX = ctx.marginLeft + 50; // Fixed start position for skills column
+    const categoryMaxWidth = 48; // Max width for category label
+
     for (const cat of skillCategories) {
       ctx.doc.setFontSize(10);
       ctx.doc.setFont(ctx.fontFamily, 'bold');
       ctx.doc.setTextColor(ctx.colors.secondary);
-      const categoryLabel = `${sanitizeForATS(cat.category)}: `;
-      ctx.doc.text(categoryLabel, ctx.marginLeft, ctx.y);
-      const labelWidth = ctx.doc.getTextWidth(categoryLabel);
+
+      const categoryLabel = `${sanitizeForATS(cat.category)}:`;
+      const categoryLines = ctx.doc.splitTextToSize(categoryLabel, categoryMaxWidth);
+
+      // Render category label (might be multiple lines if very long)
+      const startY = ctx.y;
+      for (const line of categoryLines) {
+        ctx.doc.text(line, ctx.marginLeft, ctx.y);
+        ctx.y += 3.8;
+      }
+
+      // Reset Y to start if skills are shorter than label, but skills usually longer
+      const endLabelY = ctx.y;
+      ctx.y = startY;
 
       ctx.doc.setFont(ctx.fontFamily, 'normal');
       const skillsText = sanitizeForATS(cat.skills.join(', '));
+      const skillLines = ctx.doc.splitTextToSize(skillsText, ctx.contentWidth - (skillsX - ctx.marginLeft));
 
-      // Calculate available width for skills
-      const availableWidth = ctx.contentWidth - labelWidth;
-      const skillLines = ctx.doc.splitTextToSize(skillsText, availableWidth);
-
-      // First line after category label
-      ctx.doc.text(skillLines[0], ctx.marginLeft + labelWidth, ctx.y);
-      ctx.y += 3.8;
-
-      // Continuation lines (indented to align with first skill)
-      for (let i = 1; i < skillLines.length; i++) {
-        ctx.doc.text(skillLines[i], ctx.marginLeft + labelWidth, ctx.y);
+      for (const line of skillLines) {
+        ctx.doc.text(line, skillsX, ctx.y);
         ctx.y += 3.8;
       }
+
+      // Ensure next category starts after the longest of label or skills
+      ctx.y = Math.max(ctx.y, endLabelY) + 0.5;
     }
-  } else {
+  }
+  else {
     // Flat skills list - ATS friendly comma-separated format
     ctx.doc.setFontSize(10);
     ctx.doc.setFont(ctx.fontFamily, 'normal');
