@@ -13,6 +13,11 @@ interface TemplateProps {
 export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 'classic' }: TemplateProps) {
   const template = getTemplate(templateId);
 
+  // Use skill categories if available, otherwise use flat skills
+  const skillCategories = resume.skillCategories && resume.skillCategories.length > 0
+    ? resume.skillCategories.filter(cat => cat.skills && cat.skills.length > 0)
+    : null;
+
   const handleChange = (path: string, value: string) => {
     if (editable && onFieldChange) {
       onFieldChange(path, value);
@@ -48,11 +53,6 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
     paddingBottom: '6pt',
     marginBottom: '3pt',
   };
-
-  // Use skill categories if available, otherwise use flat skills
-  const skillCategories = resume.skillCategories && resume.skillCategories.length > 0
-    ? resume.skillCategories
-    : null;
 
   return (
     <div
@@ -232,7 +232,7 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
             <ul style={{ marginLeft: '14pt', marginTop: '1pt', paddingLeft: '0', listStyleType: 'disc' }}>
               {exp.bullets.map((bullet, bulletIndex) => (
                 <li
-                  key={bulletIndex}
+                  key={`${exp.id}-bullet-${bulletIndex}`}
                   style={{ marginBottom: '1pt', textAlign: 'justify', ...editableStyle }}
                   {...editableHtmlProps(`experience.${expIndex}.bullets.${bulletIndex}`)}
                   dangerouslySetInnerHTML={{ __html: bullet }}
@@ -336,7 +336,7 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
               <ul style={{ marginLeft: '14pt', marginTop: '1pt', paddingLeft: '0', listStyleType: 'disc' }}>
                 {proj.bullets.map((bullet, bulletIndex) => (
                   <li
-                    key={bulletIndex}
+                    key={`${proj.id}-bullet-${bulletIndex}`}
                     style={{ marginBottom: '1pt', textAlign: 'justify', ...editableStyle }}
                     {...editableHtmlProps(`projects.${projIndex}.bullets.${bulletIndex}`)}
                     dangerouslySetInnerHTML={{ __html: bullet }}

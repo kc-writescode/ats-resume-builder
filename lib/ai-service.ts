@@ -223,18 +223,20 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
     }
 
     // Deduplicate skills globally across categories
-    const seenSkills = new Set<string>();
-    tailoredCategories.forEach((cat) => {
+    const seenSkillsSet = new Set<string>();
+    tailoredCategories = tailoredCategories.map((cat) => {
       if (cat && Array.isArray(cat.skills)) {
         // Filter out duplicates within the category and globally
-        cat.skills = cat.skills.filter((skill: string) => {
+        const uniqueSkills = cat.skills.filter((skill: string) => {
           const normalized = skill.toLowerCase().trim();
-          if (seenSkills.has(normalized)) return false;
-          seenSkills.add(normalized);
+          if (seenSkillsSet.has(normalized)) return false;
+          seenSkillsSet.add(normalized);
           return true;
         });
+        return { ...cat, skills: uniqueSkills };
       }
-    });
+      return cat;
+    }).filter(cat => cat.skills && cat.skills.length > 0);
 
     // Identify skills from base resume that are missing in the tailored categories
     const baseSkills = Array.isArray(baseResume.skills) ? baseResume.skills : [];
@@ -242,23 +244,27 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
       !tailoredSkillsSet.has(String(skill).toLowerCase().trim())
     );
 
-    // If there are missing skills, try to fit them into existing categories or add to 'Tools'
     if (missingBaseSkills.length > 0) {
-      // Find a generic category to dump skills into if we can't classify them
-      let targetCategory = tailoredCategories.find(c =>
-        ['tools', 'technical skills', 'technologies', 'other'].includes(c.category.toLowerCase())
-      );
-
-      if (!targetCategory) {
-        // Create one if it doesn't exist
-        targetCategory = { category: 'Technical Skills', skills: [] };
-        tailoredCategories.push(targetCategory);
-      }
-
-      // Add missing skills to this target category
       const uniqueMissing = Array.from(new Set(missingBaseSkills));
-      targetCategory.skills = [...targetCategory.skills, ...uniqueMissing];
+      if (uniqueMissing.length > 0) {
+        // Find a generic category to dump skills into if we can't classify them
+        let targetCategory = tailoredCategories.find(c =>
+          ['tools', 'technical skills', 'technologies', 'other', 'analytical & development tools'].includes(c.category.toLowerCase())
+        );
+
+        if (!targetCategory) {
+          // Create one if it doesn't exist
+          targetCategory = { category: 'Technical Skills', skills: [] };
+          tailoredCategories.push(targetCategory);
+        }
+
+        // Add missing skills to this target category
+        targetCategory.skills = Array.from(new Set([...targetCategory.skills, ...uniqueMissing]));
+      }
     }
+
+    // Final sweep to ensure NO empty categories make it through
+    tailoredCategories = tailoredCategories.filter(cat => cat.skills && cat.skills.length > 0);
 
     // Ensure we never return empty categories if we have skills
     if (tailoredCategories.length === 0 && baseSkills.length > 0) {
@@ -270,10 +276,9 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
 
     // Merge with base resume to preserve personal info and IDs
     const tailoredResume: BaseResume = {
-      personal: baseResume.personal, // Keep original contact info
+      personal: baseResume.personal,
       summary: tailoredData.summary || baseResume.summary,
       experience: tailoredData.experience.map((exp: any, index: number) => {
-        // Find matching base experience by company name (more reliable than index)
         const matchingBase = baseResume.experience.find(
           (base) => base.company.toLowerCase() === exp.company?.toLowerCase()
         ) || baseResume.experience[index];
@@ -282,7 +287,6 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
           id: matchingBase?.id || `exp-${Date.now()}-${index}`,
           title: exp.title || matchingBase?.title || '',
           company: exp.company || matchingBase?.company || '',
-          // Always prefer base resume location since AI often drops it
           location: matchingBase?.location || exp.location || '',
           startDate: exp.startDate || matchingBase?.startDate || '',
           endDate: exp.endDate || matchingBase?.endDate || '',
@@ -295,8 +299,8 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
         degree: edu.degree,
         institution: edu.institution,
         location: edu.location || baseResume.education[index]?.location || '',
-        graduationDate: edu.graduationDate || '', // Empty by default, user can add
-        gpa: edu.gpa || '' // Empty by default, user can add
+        graduationDate: edu.graduationDate || '',
+        gpa: edu.gpa || ''
       })),
       skills: Array.from(new Set([
         ...baseSkills,
@@ -321,7 +325,6 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
       certifications: tailoredData.certifications || baseResume.certifications
     };
 
-    // Validate and clean the resume
     return validateAndCleanResume(tailoredResume);
   } catch (error) {
     console.error('AI Service Error:', error);
