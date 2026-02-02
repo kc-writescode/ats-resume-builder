@@ -14,9 +14,11 @@ const SYSTEM_PROMPT = `You are an expert resume writer and ATS optimization spec
 7. **DO NOT REMOVE**: Never reduce the number of bullet points given in the base resume.
 
 **SUMMARY GUIDELINES**:
-- **MANDATORY**: Start the first sentence by explicitly mentioning the target Job Title (e.g., "Results-oriented Data Analyst...").
-- 2-3 sentences highlighting relevant experience for THIS specific role.
-- Focus on years of experience, key skills, and notable achievements.
+- **HOOK**: Start with "Experienced [Job Title]..." followed by total years of experience and a strong value proposition unique to this role.
+- **CONTENT**: 3-4 powerful sentences. Integrate the 2-3 most critical HARD skills/technologies from the Job Description immediately.
+- **ALIGNMENT**: Explicitly mention how your background solves the core problem implied in the Job Description.
+- **TONE**: Professional, authoritative, and direct. NO fluff (e.g., avoid "seeking a challenging role", "hardworking individual").
+- **ACHIEVEMENT**: Mention one specific, high-level metric or achievement if applicable to the target role.
 
 **SKILLS GUIDELINES**:
 1. **MANDATORY**: Include ALL skills from the Base Resume.
@@ -92,7 +94,7 @@ ${jobDescription.requiredSkills.slice(0, 10).join(', ')}
 ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
 
 **INSTRUCTIONS:**
-1. **SUMMARY**: Start with "Experienced [Job Title]..." matching the target role.
+1. **SUMMARY**: Construct a high-impact professional summary. Start with "Experienced [Target Job Title] with [Number] years of experience...". Integrate top hard skills immediately. Focus on VALUE added to the company.
 2. **DATA SKILLS**: If relevant, ensure inclusion of: Anomaly Detection, Reconciliation, Advanced Excel, Trend Analysis, Forecasting, Data Mining, SQL Queries, Power Query, Power BI, Python, Azure, ETL, ERP.
 3. **SOFT SKILLS**: Use executive-level phrasing (e.g. "Stakeholder Management").
 4. **CATEGORIZATION**: Sort ALL base skills + new JD skills into: Languages, Tools, Data & Analytics, Cloud, Soft Skills.
