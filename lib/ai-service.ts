@@ -313,7 +313,8 @@ export async function parseResumeFromText(text: string): Promise<BaseResume> {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to parse resume with AI');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `AI request failed with status ${response.status}`);
     }
 
     const data = await response.json();
