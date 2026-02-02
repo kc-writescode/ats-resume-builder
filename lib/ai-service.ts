@@ -20,10 +20,17 @@ const SYSTEM_PROMPT = `You are an expert resume writer and ATS optimization spec
 
 **SKILLS GUIDELINES**:
 1. **MANDATORY**: Include ALL skills from the Base Resume.
-2. **JD INTEGRATION**: Aggressively extract and include ALL matching hard skills/keywords from the Job Description. If the JD mentions a tool/lib/concept the candidate likely knows (based on context), add it.
-3. **SOFT SKILLS**: You MUST create a category called "Soft Skills" and include 4-6 relevant soft skills found in the JD (e.g., "Communication", "Leadership", "Agile", "Problem Solving").
+2. **JD INTEGRATION**: Aggressively extract and include ALL matching hard skills/keywords from the Job Description.
+3. **SOFT SKILLS**: You MUST create a category called "Soft Skills" and include 4-6 relevant soft skills found in the JD (e.g., "Communication", "Leadership", "Agile").
 4. **CATEGORIZATION**: Group into: Languages, Frameworks, Tools, Cloud/Infrastructure, Methodologies, Soft Skills.
-5. **ATS OPTIMIZATION**: Use the exact phrasing found in the JD for skills (e.g., if JD says "AWS Lambda", use "AWS Lambda", not just "AWS").
+5. **NO DUPLICATES**: Do not list the same skill in multiple categories.
+6. **ATS OPTIMIZATION**: Use the exact phrasing found in the JD.
+
+**CORE COMPETENCIES GUIDELINES**:
+1. ONLY High-Impact Technical Keywords (e.g. "Distributed Systems", "Machine Learning", "Cloud Architecture").
+2. NO Soft Skills (e.g., "Leadership", "Communication") in this section.
+3. NO Generic Terms (e.g., "Development", "Programming").
+4. Max 8-10 top-tier technical keywords separated by pipes.
 
 **EDUCATION GUIDELINES**:
 - Keep degree and institution only
@@ -160,6 +167,20 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
     } catch (e) {
       console.warn('Error processing tailored skills:', e);
     }
+
+    // Deduplicate skills globally across categories
+    const seenSkills = new Set<string>();
+    tailoredCategories.forEach((cat) => {
+      if (cat && Array.isArray(cat.skills)) {
+        // Filter out duplicates within the category and globally
+        cat.skills = cat.skills.filter((skill: string) => {
+          const normalized = skill.toLowerCase().trim();
+          if (seenSkills.has(normalized)) return false;
+          seenSkills.add(normalized);
+          return true;
+        });
+      }
+    });
 
     // Identify skills from base resume that are missing in the tailored categories
     const baseSkills = Array.isArray(baseResume.skills) ? baseResume.skills : [];

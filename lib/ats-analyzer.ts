@@ -40,6 +40,9 @@ export function analyzeKeywords(
     if (/^\d+$/.test(kw.trim())) return false;
     if (lower.length < 3) return false;
     if (/^(the|and|or|for|with|from|into|this|that|have|has|will|can|may|must|should)$/i.test(kw.trim())) return false;
+    // Filter soft skills and generic terms
+    if (/^(communication|leadership|teamwork|collaborat|problem|analysis|thinking|creative|flexible|time|detail|self|motivated|hard|soft|skill)/i.test(lower)) return false;
+    if (lower === 'development' || lower === 'programming' || lower === 'coding' || lower === 'software') return false;
     return true;
   };
 
@@ -94,50 +97,50 @@ function calculateKeywordMatch(resume: BaseResume, jobDescription: JobDescriptio
   const resumeText = getResumeText(resume).toLowerCase();
   const keywords = jobDescription.extractedKeywords.map(k => k.toLowerCase());
   const requiredSkills = jobDescription.requiredSkills.map(s => s.toLowerCase());
-  
+
   const allKeywords = [...new Set([...keywords, ...requiredSkills])];
-  
+
   if (allKeywords.length === 0) return 100;
-  
-  const matchedKeywords = allKeywords.filter(keyword => 
+
+  const matchedKeywords = allKeywords.filter(keyword =>
     resumeText.includes(keyword)
   );
-  
+
   const matchPercentage = (matchedKeywords.length / allKeywords.length) * 100;
-  
+
   return Math.min(Math.round(matchPercentage), 100);
 }
 
 function calculateFormatCompatibility(resume: BaseResume): number {
   let score = 100;
   const resumeText = getResumeText(resume);
-  
+
   // Deduct for problematic characters
   if (resumeText.includes('—') || resumeText.includes('–')) {
     score -= 10; // Em and en dashes
   }
-  
+
   if (resumeText.includes('•') === false && resume.experience.length > 0) {
     score -= 5; // Missing bullet points
   }
-  
+
   // Check for standard section headers
-  const hasStandardSections = 
+  const hasStandardSections =
     resume.experience.length > 0 &&
     resume.education.length > 0 &&
     resume.skills.length > 0;
-  
+
   if (!hasStandardSections) {
     score -= 15;
   }
-  
+
   // Check for clean formatting (no special characters that confuse ATS)
   const specialChars = /[^\w\s.,;:()\-'"/&@]/g;
   const specialCharCount = (resumeText.match(specialChars) || []).length;
   if (specialCharCount > 10) {
     score -= 5;
   }
-  
+
   return Math.max(score, 0);
 }
 
@@ -146,44 +149,44 @@ function calculateSectionCompleteness(resume: BaseResume): number {
   const maxScore = 100;
   const sections = 5; // personal, summary, experience, education, skills
   const pointsPerSection = maxScore / sections;
-  
+
   // Personal info
   if (resume.personal.name && resume.personal.email && resume.personal.phone) {
     score += pointsPerSection;
   }
-  
+
   // Summary
   if (resume.summary && resume.summary.length >= 100) {
     score += pointsPerSection;
   } else if (resume.summary) {
     score += pointsPerSection * 0.5;
   }
-  
+
   // Experience
   if (resume.experience.length >= 2) {
     score += pointsPerSection;
   } else if (resume.experience.length >= 1) {
     score += pointsPerSection * 0.7;
   }
-  
+
   // Education
   if (resume.education.length >= 1) {
     score += pointsPerSection;
   }
-  
+
   // Skills
   if (resume.skills.length >= 5) {
     score += pointsPerSection;
   } else if (resume.skills.length >= 3) {
     score += pointsPerSection * 0.7;
   }
-  
+
   return Math.round(score);
 }
 
 function calculateContentQuality(resume: BaseResume): number {
   let score = 100;
-  
+
   // Check bullet points for action verbs
   const actionVerbs = [
     'led', 'managed', 'developed', 'created', 'implemented', 'designed',
@@ -191,10 +194,10 @@ function calculateContentQuality(resume: BaseResume): number {
     'established', 'optimized', 'coordinated', 'spearheaded', 'launched',
     'executed', 'drove', 'streamlined', 'enhanced', 'collaborated'
   ];
-  
+
   let bulletsWithActionVerbs = 0;
   let totalBullets = 0;
-  
+
   resume.experience.forEach(exp => {
     exp.bullets.forEach(bullet => {
       totalBullets++;
@@ -204,18 +207,18 @@ function calculateContentQuality(resume: BaseResume): number {
       }
     });
   });
-  
+
   if (totalBullets > 0) {
     const actionVerbRatio = bulletsWithActionVerbs / totalBullets;
     if (actionVerbRatio < 0.5) {
       score -= 20;
     }
   }
-  
+
   // Check for quantifiable achievements
   const hasNumbers = /\d+%|\d+\+|\$\d+|\d+ (million|thousand|hundred)/;
   let bulletsWithMetrics = 0;
-  
+
   resume.experience.forEach(exp => {
     exp.bullets.forEach(bullet => {
       if (hasNumbers.test(bullet)) {
@@ -223,14 +226,14 @@ function calculateContentQuality(resume: BaseResume): number {
       }
     });
   });
-  
+
   if (totalBullets > 0) {
     const metricsRatio = bulletsWithMetrics / totalBullets;
     if (metricsRatio < 0.3) {
       score -= 15;
     }
   }
-  
+
   return Math.max(score, 0);
 }
 
@@ -245,61 +248,61 @@ function generateSuggestions(
   }
 ): string[] {
   const suggestions: string[] = [];
-  
+
   if (scores.keywordMatch < 70) {
     suggestions.push('Add more keywords from the job description to improve relevance');
   }
-  
+
   if (scores.formatCompatibility < 90) {
     suggestions.push('Remove em dashes (—) and use hyphens (-) instead');
     suggestions.push('Ensure all bullet points use standard formatting');
   }
-  
+
   if (scores.sectionCompleteness < 80) {
     suggestions.push('Complete all resume sections for better ATS parsing');
     if (resume.summary.length < 100) {
       suggestions.push('Expand your professional summary to 2-3 sentences');
     }
   }
-  
+
   if (scores.contentQuality < 80) {
     suggestions.push('Start more bullet points with strong action verbs');
     suggestions.push('Add quantifiable metrics to demonstrate impact');
   }
-  
+
   // Check for missing skills from job description
   const resumeSkills = resume.skills.map(s => s.toLowerCase());
   const missingSkills = jobDescription.requiredSkills.filter(
     skill => !resumeSkills.includes(skill.toLowerCase())
   );
-  
+
   if (missingSkills.length > 0) {
     suggestions.push(`Consider adding these relevant skills: ${missingSkills.slice(0, 3).join(', ')}`);
   }
-  
+
   return suggestions;
 }
 
 function getResumeText(resume: BaseResume): string {
   const parts: string[] = [];
-  
+
   parts.push(resume.personal.name);
   parts.push(resume.summary);
-  
+
   resume.experience.forEach(exp => {
     parts.push(exp.title);
     parts.push(exp.company);
     parts.push(...exp.bullets);
   });
-  
+
   resume.education.forEach(edu => {
     parts.push(edu.degree);
     parts.push(edu.institution);
   });
-  
+
   parts.push(...resume.skills);
   parts.push(...resume.certifications);
-  
+
   return parts.join(' ');
 }
 
@@ -309,13 +312,13 @@ export function extractKeywordsFromJobDescription(jobDescription: string): JobDe
 
   // Extract job title
   const titleMatch = text.match(/(?:position|role|title|job):\s*([^\n]+)/i) ||
-                     text.match(/(?:hiring|seeking|looking for)\s+(?:a|an)?\s*([^\n,]+)/i) ||
-                     originalText.match(/^([A-Z][A-Za-z\s]+(?:Engineer|Developer|Manager|Analyst|Architect|Lead|Director|Specialist))/m);
+    text.match(/(?:hiring|seeking|looking for)\s+(?:a|an)?\s*([^\n,]+)/i) ||
+    originalText.match(/^([A-Z][A-Za-z\s]+(?:Engineer|Developer|Manager|Analyst|Architect|Lead|Director|Specialist))/m);
   const jobTitle = titleMatch ? titleMatch[1].trim().replace(/[^\w\s]/g, '') : 'Position';
 
   // Extract company name
   const companyMatch = text.match(/(?:company|organization|at|join):\s*([^\n,]+)/i) ||
-                       originalText.match(/^([A-Z][a-zA-Z\s&.]+)(?:\s+is|,|\s+–)/m);
+    originalText.match(/^([A-Z][a-zA-Z\s&.]+)(?:\s+is|,|\s+–)/m);
   const companyName = companyMatch ? companyMatch[1].trim() : 'Company';
 
   // Comprehensive skill patterns for high-impact keywords
@@ -371,8 +374,8 @@ export function extractKeywordsFromJobDescription(jobDescription: string): JobDe
           const cleaned = item.replace(/^[•\-\*\d+.)]\s*/, '').trim();
           // Extract meaningful phrases (skip years of experience patterns)
           if (cleaned.length > 5 &&
-              !cleaned.match(/^\d+\+?\s*years?/i) &&
-              !cleaned.match(/^bachelor|^master|^degree|^education/i)) {
+            !cleaned.match(/^\d+\+?\s*years?/i) &&
+            !cleaned.match(/^bachelor|^master|^degree|^education/i)) {
             // Extract key technical terms from the requirement
             const techTerms = cleaned.match(/\b(python|java|aws|react|node|sql|docker|kubernetes|machine learning|data|api|cloud|agile|scrum)\b/gi);
             if (techTerms) {
