@@ -39,10 +39,14 @@ export async function POST(request: NextRequest) {
         }
 
         return NextResponse.json({ text });
-    } catch (error) {
-        console.error('File Parsing Error:', error);
+    } catch (error: any) {
+        console.error('File Parsing Error Specifics:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
         return NextResponse.json(
-            { error: 'Failed to parse file' },
+            { error: `Failed to parse file: ${error.message}` },
             { status: 500 }
         );
     }
