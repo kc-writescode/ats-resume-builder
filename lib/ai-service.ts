@@ -120,9 +120,16 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
     // Parse the JSON response
     let tailoredData;
     try {
-      // Remove any markdown code blocks if present
-      const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      tailoredData = JSON.parse(cleaned);
+      // Robust JSON extraction: find the first '{' and last '}'
+      const jsonStart = content.indexOf('{');
+      const jsonEnd = content.lastIndexOf('}');
+
+      if (jsonStart === -1 || jsonEnd === -1) {
+        throw new Error('No JSON object found in response');
+      }
+
+      const jsonString = content.substring(jsonStart, jsonEnd + 1);
+      tailoredData = JSON.parse(jsonString);
     } catch (parseError) {
       console.error('JSON Parse Error:', parseError);
       console.error('Raw response:', content);
@@ -321,8 +328,15 @@ export async function parseResumeFromText(text: string): Promise<BaseResume> {
     const content = data.content[0].text;
 
     // Clean and parse JSON
-    const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    const parsed = JSON.parse(cleaned);
+    const jsonStart = content.indexOf('{');
+    const jsonEnd = content.lastIndexOf('}');
+    
+    if (jsonStart === -1 || jsonEnd === -1) {
+      throw new Error('No JSON object found in response');
+    }
+    
+    const jsonString = content.substring(jsonStart, jsonEnd + 1);
+    const parsed = JSON.parse(jsonString);
 
     // Add IDs and ensure structure
     return {
