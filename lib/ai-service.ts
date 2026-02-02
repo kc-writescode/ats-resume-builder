@@ -249,3 +249,102 @@ Return only the rewritten bullet point, nothing else.`;
     return bulletPoint; // Return original on error
   }
 }
+
+export async function parseResumeFromText(text: string): Promise<BaseResume> {
+  const systemPrompt = `You are an expert resume parser. Extract information from the resume text and structure it into a JSON format.
+  
+  Return ONLY valid JSON with this structure:
+  {
+    "personal": {
+      "name": "Full Name",
+      "email": "email@example.com",
+      "phone": "Phone Number",
+      "linkedin": "LinkedIn URL (optional)",
+      "github": "GitHub URL (optional)",
+      "portfolio": "Portfolio URL (optional)"
+    },
+    "summary": "Professional summary text...",
+    "experience": [
+      {
+        "title": "Job Title",
+        "company": "Company Name",
+        "location": "City, State",
+        "startDate": "Month Year",
+        "endDate": "Month Year or Present",
+        "bullets": ["Achievement 1", "Achievement 2"]
+      }
+    ],
+    "education": [
+      {
+        "degree": "Degree Name",
+        "institution": "University Name",
+        "location": "City, State (optional)",
+        "graduationDate": "Year or Month Year",
+        "gpa": "GPA (optional)"
+      }
+    ],
+    "skills": ["Skill 1", "Skill 2"],
+    "certifications": ["Cert 1", "Cert 2"]
+  }
+
+  IMPORTANT:
+  - If a field is missing, use an empty string "" or empty array [].
+  - Maintain the integrity of the information.
+  - Split experience descriptions into individual bullet points.
+  - Extract skills as a flat list initially.
+  `;
+
+  try {
+    const response = await fetch('/api/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        max_tokens: 4000,
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: `Extract data from this resume text:\n\n${text}`
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to parse resume with AI');
+    }
+
+    const data = await response.json();
+    const content = data.content[0].text;
+
+    // Clean and parse JSON
+    const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+
+    // Add IDs and ensure structure
+    return {
+      personal: parsed.personal || { name: '', email: '', phone: '' },
+      summary: parsed.summary || '',
+      experience: (parsed.experience || []).map((exp: any, i: number) => ({
+        ...exp,
+        id: `exp-${Date.now()}-${i}`,
+        current: exp.endDate?.toLowerCase().includes('present') || false
+      })),
+      education: (parsed.education || []).map((edu: any, i: number) => ({
+        ...edu,
+        id: `edu-${Date.now()}-${i}`
+      })),
+      skills: parsed.skills || [],
+      // Initialize empty categories as parsing logic might just dump them in skills
+      skillCategories: [
+        { category: 'Technical Skills', skills: parsed.skills || [] }
+      ],
+      certifications: parsed.certifications || []
+    };
+  } catch (error) {
+    console.error('Resume Parsing Error:', error);
+    throw error;
+  }
+}
