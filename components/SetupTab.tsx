@@ -31,10 +31,14 @@ export function SetupTab({ baseResume, onSave }: SetupTabProps) {
       });
 
       if (!parseResponse.ok) {
-        throw new Error('Failed to parse file content');
+        const errorData = await parseResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || `File parsing failed: ${parseResponse.statusText}`);
       }
 
       const { text } = await parseResponse.json();
+      if (!text) {
+        throw new Error('No text extracted from resume');
+      }
 
       // 2. Extract structured data using AI
       const parsedResume = await parseResumeFromText(text);
@@ -51,7 +55,7 @@ export function SetupTab({ baseResume, onSave }: SetupTabProps) {
       event.target.value = '';
     } catch (error) {
       console.error('Upload Error:', error);
-      setUploadError('Failed to parse resume. Please try entering data manually.');
+      setUploadError(error instanceof Error ? error.message : 'Failed to parse resume. Please try entering data manually.');
     } finally {
       setIsUploading(false);
     }
