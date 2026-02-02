@@ -19,10 +19,11 @@ const SYSTEM_PROMPT = `You are an expert resume writer and ATS optimization spec
 - Focus on years of experience, key skills, and notable achievements
 
 **SKILLS GUIDELINES**:
-- CRITICAL: You MUST include ALL skills listed in the Base Resume. Do not remove any.
-- ADD high-impact skills required by the Job Description if they are relevant to the candidate's background.
-- Organize into categories: Languages, Frameworks, Tools, Cloud/Infrastructure, Methodologies.
-- Ensure the final skills list is a superset of the base skills.
+1. **MANDATORY**: Include ALL skills from the Base Resume.
+2. **JD INTEGRATION**: Aggressively extract and include ALL matching hard skills/keywords from the Job Description. If the JD mentions a tool/lib/concept the candidate likely knows (based on context), add it.
+3. **SOFT SKILLS**: You MUST create a category called "Soft Skills" and include 4-6 relevant soft skills found in the JD (e.g., "Communication", "Leadership", "Agile", "Problem Solving").
+4. **CATEGORIZATION**: Group into: Languages, Frameworks, Tools, Cloud/Infrastructure, Methodologies, Soft Skills.
+5. **ATS OPTIMIZATION**: Use the exact phrasing found in the JD for skills (e.g., if JD says "AWS Lambda", use "AWS Lambda", not just "AWS").
 
 **EDUCATION GUIDELINES**:
 - Keep degree and institution only
@@ -88,9 +89,11 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
 2. Keep the candidate's actual achievements and metrics - just enhance the wording
 3. Make bullets substantive (fill the line) but not verbose
 4. Prioritize the high-priority keywords in bullets and summary
-5. Organize skills into logical categories based on the job requirements
-6. Do NOT include graduation dates/years in education
-7. Sound like a human wrote it - natural, professional, not robotic`;
+5. Organize skills into logical categories (Languages, Tools, Soft Skills, etc.).
+6. ADD distinct "Soft Skills" category with relevant skills from JD.
+7. MAXIMIZE keyword match: Add any skill from the JD that fits the candidate's profile.
+8. Do NOT include graduation dates/years in education
+9. Sound like a human wrote it - natural, professional, not robotic`;
 
   try {
     const response = await fetch('/api/generate', {
