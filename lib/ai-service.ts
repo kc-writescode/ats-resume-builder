@@ -178,17 +178,30 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
       throw new Error('Failed to parse AI response. Please try again.');
     }
 
-    // ENSURE SKILLS ARE ARRAYS (Bug fix for e.skills.join is not a function)
+    // ENSURE SKILLS ARE ARRAYS & CLEAN CATEGORIES
     if (Array.isArray(tailoredData.skillCategories)) {
-      tailoredData.skillCategories = tailoredData.skillCategories.map((cat: any) => {
-        if (typeof cat.skills === 'string') {
-          cat.skills = (cat.skills as string).split(',').map(s => s.trim()).filter(Boolean);
-        }
-        if (!Array.isArray(cat.skills)) {
-          cat.skills = [];
-        }
-        return cat;
-      });
+      tailoredData.skillCategories = tailoredData.skillCategories
+        .filter((cat: any) => {
+          const name = String(cat.category || '').toLowerCase().trim();
+          // Filter out redundant "Technical Skills" category if it's just a dump
+          // (AI sometimes adds this as a catch-all at the end)
+          if ((name === 'technical skills' || name === 'skills') && tailoredData.skillCategories.length > 3) {
+            return false;
+          }
+          return true;
+        })
+        .map((cat: any) => {
+          if (typeof cat.skills === 'string') {
+            cat.skills = (cat.skills as string).split(',').map(s => s.trim()).filter(Boolean);
+          }
+          if (!Array.isArray(cat.skills)) {
+            cat.skills = [];
+          }
+          // Clean category name (remove trailing colons and extra whitespace)
+          cat.category = String(cat.category || '').trim().replace(/:$/, '');
+          return cat;
+        })
+        .filter((cat: any) => cat.skills && cat.skills.length > 0); // Filter out empty categories
     }
 
     // Smart merge of skill categories to ensure NO base skill is lost

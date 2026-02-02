@@ -148,13 +148,20 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
       {/* Technical Skills - ATS optimized categorized format */}
       <div style={{ marginBottom: '8pt' }}>
         <h2 style={sectionHeaderStyle}>Technical Skills</h2>
-        {skillCategories ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2pt' }}>
+        {skillCategories && skillCategories.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3pt' }}>
             {skillCategories.map((cat, idx) => (
-              <div key={idx} style={{ textAlign: 'justify', display: 'flex', gap: '4pt', alignItems: 'flex-start' }}>
+              <div key={idx} style={{
+                textAlign: 'justify',
+                display: 'grid',
+                gridTemplateColumns: '140pt 1fr',
+                gap: '8pt',
+                alignItems: 'baseline'
+              }}>
                 <strong
                   style={{
-                    minWidth: '140pt',
+                    fontFamily: template.fonts.heading,
+                    fontSize: '9pt',
                     ...editableStyle
                   }}
                   {...editableProps(`skillCategories.${idx}.category`)}
@@ -162,7 +169,10 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
                   {cat.category}:
                 </strong>
                 <span
-                  style={editableStyle}
+                  style={{
+                    fontSize: '9pt',
+                    ...editableStyle
+                  }}
                   {...editableProps(`skillCategories.${idx}.skills`)}
                 >
                   {cat.skills.join(', ')}
@@ -172,7 +182,7 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
           </div>
         ) : (
           <p
-            style={{ textAlign: 'justify', ...editableStyle }}
+            style={{ textAlign: 'justify', fontSize: '9pt', ...editableStyle }}
             {...editableProps('skills')}
           >
             {resume.skills.join(', ')}
