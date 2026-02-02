@@ -159,6 +159,94 @@ function writeFormattedText(
 
   return ctx.y - startY;
 }
+// Render a list of bullet points with justification and bold support
+function renderBullets(ctx: PDFContext, bullets: string[]): void {
+  ctx.doc.setFontSize(10);
+  ctx.doc.setTextColor(ctx.colors.secondary);
+
+  for (const bullet of bullets) {
+    const bulletIndent = ctx.marginLeft + 4;
+    const bulletWidth = ctx.contentWidth - 4;
+    const lineHeight = 3.5;
+
+    const segments = parseBoldSegments(sanitizeForATS(bullet));
+    const lines: Array<Array<{ text: string; bold: boolean }>> = [];
+    let currentLine: Array<{ text: string; bold: boolean }> = [];
+    let currentLineWidth = 0;
+
+    for (const seg of segments) {
+      const words = seg.text.split(/\s+/).filter(w => w.length > 0);
+      ctx.doc.setFont(ctx.fontFamily, seg.bold ? 'bold' : 'normal');
+
+      for (const word of words) {
+        const wordWidth = ctx.doc.getTextWidth(word);
+        const spaceWidth = ctx.doc.getTextWidth(' ');
+        const needsSpace = currentLine.length > 0;
+        const totalWidth = needsSpace ? wordWidth + spaceWidth : wordWidth;
+
+        if (currentLineWidth + totalWidth > bulletWidth && currentLine.length > 0) {
+          lines.push([...currentLine]);
+          currentLine = [];
+          currentLineWidth = 0;
+        }
+
+        if (currentLine.length > 0) {
+          currentLine.push({ text: ' ', bold: false });
+          currentLineWidth += spaceWidth;
+        }
+
+        currentLine.push({ text: word, bold: seg.bold });
+        currentLineWidth += wordWidth;
+      }
+    }
+
+    if (currentLine.length > 0) {
+      lines.push(currentLine);
+    }
+
+    // Draw bullet point
+    ctx.doc.setFont(ctx.fontFamily, 'normal');
+    ctx.doc.text('•', ctx.marginLeft + 0.5, ctx.y);
+
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+      const line = lines[lineIndex];
+      const isLastLine = lineIndex === lines.length - 1;
+
+      let totalTextWidth = 0;
+      let spaceCount = 0;
+      for (const seg of line) {
+        ctx.doc.setFont(ctx.fontFamily, seg.bold ? 'bold' : 'normal');
+        if (seg.text === ' ') {
+          spaceCount++;
+        } else {
+          totalTextWidth += ctx.doc.getTextWidth(seg.text);
+        }
+      }
+
+      const baseSpaceWidth = ctx.doc.getTextWidth(' ');
+      let justifiedSpaceWidth = baseSpaceWidth;
+
+      if (!isLastLine && spaceCount > 0) {
+        const remainingSpace = bulletWidth - totalTextWidth;
+        justifiedSpaceWidth = remainingSpace / spaceCount;
+        justifiedSpaceWidth = Math.min(justifiedSpaceWidth, baseSpaceWidth * 2.5);
+      }
+
+      let lineX = bulletIndent;
+      for (const seg of line) {
+        ctx.doc.setFont(ctx.fontFamily, seg.bold ? 'bold' : 'normal');
+        if (seg.text === ' ') {
+          lineX += justifiedSpaceWidth;
+        } else {
+          ctx.doc.text(seg.text, lineX, ctx.y);
+          lineX += ctx.doc.getTextWidth(seg.text);
+        }
+      }
+      ctx.y += lineHeight;
+    }
+    ctx.y += 0.3;
+  }
+}
 
 // Write plain text
 function writeText(
@@ -492,94 +580,46 @@ function renderResume(ctx: PDFContext, resume: BaseResume): void {
     ctx.doc.setFontSize(10);
     ctx.doc.setTextColor(ctx.colors.secondary);
 
-    for (const bullet of exp.bullets) {
-      const bulletIndent = ctx.marginLeft + 4;
-      const bulletWidth = ctx.contentWidth - 4;
-      const lineHeight = 3.5;
-
-      const segments = parseBoldSegments(sanitizeForATS(bullet));
-      const lines: Array<Array<{ text: string; bold: boolean }>> = [];
-      let currentLine: Array<{ text: string; bold: boolean }> = [];
-      let currentLineWidth = 0;
-
-      for (const seg of segments) {
-        const words = seg.text.split(/\s+/).filter(w => w.length > 0);
-        ctx.doc.setFont(ctx.fontFamily, seg.bold ? 'bold' : 'normal');
-
-        for (const word of words) {
-          const wordWidth = ctx.doc.getTextWidth(word);
-          const spaceWidth = ctx.doc.getTextWidth(' ');
-          const needsSpace = currentLine.length > 0;
-          const totalWidth = needsSpace ? wordWidth + spaceWidth : wordWidth;
-
-          if (currentLineWidth + totalWidth > bulletWidth && currentLine.length > 0) {
-            lines.push([...currentLine]);
-            currentLine = [];
-            currentLineWidth = 0;
-          }
-
-          if (currentLine.length > 0) {
-            currentLine.push({ text: ' ', bold: false });
-            currentLineWidth += spaceWidth;
-          }
-
-          currentLine.push({ text: word, bold: seg.bold });
-          currentLineWidth += wordWidth;
-        }
-      }
-
-      if (currentLine.length > 0) {
-        lines.push(currentLine);
-      }
-
-      // Draw bullet point - vertically centered with first line of text
-      ctx.doc.setFont(ctx.fontFamily, 'normal');
-      ctx.doc.text('•', ctx.marginLeft + 0.5, ctx.y);
-
-      for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-        const line = lines[lineIndex];
-        const isLastLine = lineIndex === lines.length - 1;
-
-        // Calculate total text width for this line (excluding spaces)
-        let totalTextWidth = 0;
-        let spaceCount = 0;
-        for (const seg of line) {
-          ctx.doc.setFont(ctx.fontFamily, seg.bold ? 'bold' : 'normal');
-          if (seg.text === ' ') {
-            spaceCount++;
-          } else {
-            totalTextWidth += ctx.doc.getTextWidth(seg.text);
-          }
-        }
-
-        // Calculate justified space width (only for non-last lines with multiple words)
-        const baseSpaceWidth = ctx.doc.getTextWidth(' ');
-        let justifiedSpaceWidth = baseSpaceWidth;
-
-        if (!isLastLine && spaceCount > 0) {
-          const remainingSpace = bulletWidth - totalTextWidth;
-          justifiedSpaceWidth = remainingSpace / spaceCount;
-          // Cap the space to avoid overly stretched text
-          justifiedSpaceWidth = Math.min(justifiedSpaceWidth, baseSpaceWidth * 2.5);
-        }
-
-        let lineX = bulletIndent;
-        for (const seg of line) {
-          ctx.doc.setFont(ctx.fontFamily, seg.bold ? 'bold' : 'normal');
-          if (seg.text === ' ') {
-            lineX += justifiedSpaceWidth;
-          } else {
-            ctx.doc.text(seg.text, lineX, ctx.y);
-            lineX += ctx.doc.getTextWidth(seg.text);
-          }
-        }
-
-        ctx.y += lineHeight;
-      }
-
-      ctx.y += 0.3;
-    }
+    renderBullets(ctx, exp.bullets);
     ctx.y += 1;
+  }
+
+  // === PROJECTS ===
+  if (resume.projects && resume.projects.length > 0) {
+    writeSectionHeader(ctx, 'Projects');
+
+    for (const proj of resume.projects) {
+      const name = sanitizeForATS(proj.name);
+      ctx.doc.setFontSize(10);
+      ctx.doc.setFont(ctx.fontFamily, 'bold');
+      ctx.doc.setTextColor(ctx.colors.primary);
+      ctx.doc.text(name, ctx.marginLeft, ctx.y);
+
+      if (proj.link) {
+        const nameWidth = ctx.doc.getTextWidth(name);
+        ctx.doc.setFont(ctx.fontFamily, 'normal');
+        ctx.doc.setTextColor(ctx.colors.secondary);
+        ctx.doc.text(` | ${sanitizeForATS(proj.link)}`, ctx.marginLeft + nameWidth, ctx.y);
+      }
+
+      if (proj.startDate || proj.endDate) {
+        const dateText = sanitizeForATS(proj.startDate && proj.endDate ? `${proj.startDate} - ${proj.endDate}` : (proj.startDate || proj.endDate || ''));
+        ctx.doc.setFontSize(9);
+        ctx.doc.setFont(ctx.fontFamily, 'bold');
+        ctx.doc.text(dateText, ctx.pageWidth - ctx.marginRight, ctx.y, { align: 'right' });
+      }
+      ctx.y += 3.5;
+
+      if (proj.description) {
+        ctx.doc.setFontSize(9);
+        ctx.doc.setFont(ctx.fontFamily, 'italic');
+        ctx.doc.setTextColor(ctx.colors.secondary);
+        writeText(ctx, sanitizeForATS(proj.description), 9, { italic: true });
+      }
+
+      renderBullets(ctx, proj.bullets);
+      ctx.y += 1;
+    }
   }
 
   // === EDUCATION ===

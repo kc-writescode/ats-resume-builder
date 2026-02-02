@@ -148,6 +148,9 @@ export async function generateDOCX(
         // Skills
         ...createSkillsSection(resume, styles),
 
+        // Projects
+        ...createProjectsSection(resume, styles),
+
         // Certifications (if any)
         ...createCertificationsSection(resume, styles)
       ]
@@ -514,6 +517,105 @@ function createCertificationsSection(resume: BaseResume, styles: any): Paragraph
         ]
       })
     );
+  });
+
+  return paragraphs;
+}
+function createProjectsSection(resume: BaseResume, styles: any): Paragraph[] {
+  if (!resume.projects || resume.projects.length === 0) return [];
+
+  const paragraphs: Paragraph[] = [];
+
+  paragraphs.push(
+    new Paragraph({
+      spacing: { before: styles.spacing.beforeSection, after: 120 },
+      children: [
+        new TextRun({
+          text: 'PROJECTS',
+          size: styles.fonts.sectionHeader.size * 2,
+          bold: true,
+          font: styles.fonts.sectionHeader.font
+        })
+      ]
+    })
+  );
+
+  resume.projects.forEach((proj, index) => {
+    // Project name and link
+    const nameLinkRuns: TextRun[] = [
+      new TextRun({
+        text: sanitizeForATS(proj.name),
+        size: styles.fonts.jobTitle.size * 2,
+        bold: true,
+        font: styles.fonts.jobTitle.font
+      })
+    ];
+
+    if (proj.link) {
+      nameLinkRuns.push(
+        new TextRun({
+          text: ' | ' + sanitizeForATS(proj.link),
+          size: styles.fonts.body.size * 2,
+          font: styles.fonts.body.font
+        })
+      );
+    }
+
+    paragraphs.push(
+      new Paragraph({
+        spacing: {
+          before: index > 0 ? 160 : 0,
+          after: 40
+        },
+        children: nameLinkRuns
+      })
+    );
+
+    // Dates and description
+    if (proj.startDate || proj.endDate || proj.description) {
+      const detailsRuns: TextRun[] = [];
+
+      if (proj.startDate || proj.endDate) {
+        detailsRuns.push(
+          new TextRun({
+            text: sanitizeForATS(proj.startDate && proj.endDate ? `${proj.startDate} - ${proj.endDate}` : (proj.startDate || proj.endDate || '')),
+            size: styles.fonts.body.size * 2,
+            font: styles.fonts.body.font,
+            bold: true
+          })
+        );
+      }
+
+      if (proj.description) {
+        if (detailsRuns.length > 0) detailsRuns.push(new TextRun({ text: ' | ' }));
+        detailsRuns.push(
+          new TextRun({
+            text: sanitizeForATS(proj.description),
+            size: styles.fonts.body.size * 2,
+            font: styles.fonts.body.font,
+            italics: true
+          })
+        );
+      }
+
+      paragraphs.push(
+        new Paragraph({
+          spacing: { after: 60 },
+          children: detailsRuns
+        })
+      );
+    }
+
+    // Bullet points
+    proj.bullets.forEach(bullet => {
+      paragraphs.push(
+        new Paragraph({
+          numbering: { reference: 'bullets', level: 0 },
+          spacing: { after: 40 },
+          children: parseHtmlToTextRuns(sanitizeForATS(bullet), styles)
+        })
+      );
+    });
   });
 
   return paragraphs;
