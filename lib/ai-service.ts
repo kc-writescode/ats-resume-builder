@@ -21,23 +21,26 @@ const SYSTEM_PROMPT = `You are an expert resume writer and ATS optimization spec
 - **DEDUPLICATION**: Do NOT repeat soft skills verbatim from the Soft Skills section (e.g., "cross-functional collaboration").
 
 **SKILLS GUIDELINES**:
-1. **CATEGORIZATION**: Group into these SPECIFIC categories: 'Cloud Platforms', 'Data Processing & Orchestration', 'Databases & Warehousing', 'BI & Visualization', 'Languages', 'DevOps & IaC', 'Soft Skills'.
+1. **CATEGORIZATION**: Group into these SPECIFIC categories: 
+   - For AI/ML Roles: 'Programming Languages', 'Machine Learning & AI Algorithms', 'Generative AI & Large Language Models', 'MLOps & ML Engineering', 'Analytical & Development Tools', 'Databases & Data Stores', 'Vector Databases', 'Big Data & Streaming Frameworks', 'Cloud Platforms & DevOps', 'Data Visualization & BI', 'Version Control & CI/CD', 'Operating Systems', 'Security, Privacy & Governance'.
+   - For General Tech Roles: 'Cloud Platforms', 'Data Processing & Orchestration', 'Databases & Warehousing', 'BI & Visualization', 'Languages', 'DevOps & IaC', 'Soft Skills'.
 2. **DEDUPLICATION**: MERGE redundant terms. Use standard industry terms:
    - Use "SQL" (not "Sql" or "sql").
    - Use "GitHub" (merge "Git" and "GitHub").
    - Use "Airflow" (merge "Apache Airflow" and "Airflow").
    - Use "Tableau" (merge "Tableau Process").
    - Use "GCP" (not "Platform (GCP)").
+   - For AI: Use "LLMs", "RAG", "Fine-Tuning", "Vector Search" (merge similar terms).
 3. **DENSITY**: Limit to 8-10 most relevant skills per category. Do not dump every tool ever used.
 4. **SOFT SKILLS**: Use unique executive phrasing NOT found in the summary.
 5. **MANDATORY**: Include all base resume skills but categorize them strictly.
 
 **CORE COMPETENCIES GUIDELINES**:
-1. **FOCUS**: High-Level Architectural Concepts and Domain Expertise (e.g. "Scalable Data Pipelines", "Fraud Detection Systems", "Clinical Data Analysis").
+1. **FOCUS**: High-Level Architectural Concepts and Domain Expertise (e.g. "Scalable Data Pipelines", "LLM Orchestration", "Predictive Analytics Systems").
 2. **NO TOOLS**: Do NOT list specific tools (Python, SQL) here; keep those in Technical Skills. Avoid redundancy.
-2. NO Soft Skills (e.g., "Leadership", "Communication") in this section.
-3. NO Generic Terms (e.g., "Development", "Programming").
-4. Max 8-10 top-tier technical keywords separated by pipes.
+3. NO Soft Skills (e.g., "Leadership", "Communication") in this section.
+4. NO Generic Terms (e.g., "Development", "Programming").
+5. Max 8-10 top-tier technical keywords separated by pipes.
 
 **EDUCATION GUIDELINES**:
 - Keep degree and institution only
@@ -73,6 +76,16 @@ Return ONLY valid JSON:
       "institution": "School Name"
     }
   ],
+  "projects": [
+    {
+      "name": "Project Name",
+      "description": "Short description",
+      "bullets": ["Bullet 1"],
+      "link": "Link (optional)",
+      "startDate": "Month Year",
+      "endDate": "Month Year"
+    }
+  ],
   "certifications": ["Certification 1"]
 }
 
@@ -82,6 +95,12 @@ export async function generateTailoredResume(
   baseResume: BaseResume,
   jobDescription: JobDescription
 ): Promise<BaseResume> {
+  const isAIMLRole = /ml|ai|machine learning|artificial intelligence|generative ai|llm|data science/i.test(jobDescription.jobTitle + ' ' + jobDescription.text);
+
+  const skillCategories = isAIMLRole
+    ? "'Programming Languages', 'Machine Learning & AI Algorithms', 'Generative AI & Large Language Models', 'MLOps & ML Engineering', 'Analytical & Development Tools', 'Databases & Data Stores', 'Vector Databases', 'Big Data & Streaming Frameworks', 'Cloud Platforms & DevOps', 'Data Visualization & BI', 'Version Control & CI/CD', 'Operating Systems', 'Security, Privacy & Governance'"
+    : "'Cloud Platforms', 'Data Processing & Orchestration', 'Databases & Warehousing', 'BI & Visualization', 'Languages', 'DevOps & IaC'";
+
   const userPrompt = `**BASE RESUME:**
 ${JSON.stringify(baseResume, null, 2)}
 
@@ -100,12 +119,13 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
 
 **INSTRUCTIONS:**
 1. **SUMMARY**: Construct a high-impact professional summary. Start with "Experienced [Target Job Title] with [Number] years of experience...". Integrate top hard skills immediately. Focus on VALUE added to the company.
-2. **DATA SKILLS**: If relevant, ensure inclusion of: Anomaly Detection, Reconciliation, Advanced Excel, Trend Analysis, Forecasting, Data Mining, SQL Queries, Power Query, Power BI, Python, Azure, ETL, ERP.
-3. **SOFT SKILLS**: No generic terms.
-4. **CATEGORIZATION**: 'Cloud Platforms', 'Data Processing & Orchestration', 'Databases & Warehousing', 'BI & Visualization', 'Languages', 'DevOps & IaC'.
-5. **BULLETS**: ENHANCE with diverse verbs (Architected, Engineered, Spearheaded). No "Built" repetition. Clarify metrics.
-6. NO duplicates.
-7. Sound professional and human.`;
+2. **AI/ML SKILLS**: If relevant, ensure inclusion of keywords like: LLMs, RAG, Prompt Engineering, LangChain, LlamaIndex, Fine-Tuning (LoRA), Vector Search, Model Deployment, MLOps, MLflow, PyTorch, TensorFlow, Scikit-learn, Transformers, Computer Vision, NLP.
+3. **SOFT SKILLS**: No generic terms. Use phrases like "Cross-functional Leadership", "Strategic Problem Solving".
+4. **CATEGORIZATION**: Group skills into these categories: ${skillCategories}.
+5. **SKILL BREAKDOWN**: Break down broad skills into specific tools, libraries, or sub-concepts in parentheses (e.g., "Python (NumPy, SciPy, Pandas)", "Generative AI (LLMs, RAG, Fine-tuning)").
+6. **BULLETS**: ENHANCE with diverse verbs (Architected, Engineered, Spearheaded). No "Built" repetition. Clarify metrics.
+7. NO duplicates.
+8. Sound professional and human.`;
 
   try {
     const response = await fetch('/api/generate', {
@@ -134,7 +154,7 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
     const content = data.content[0].text;
 
     // Parse the JSON response
-    let tailoredData;
+    let tailoredData: any;
     try {
       // Robust JSON extraction: find the first '{' and last '}'
       const jsonStart = content.indexOf('{');
@@ -152,13 +172,23 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
       throw new Error('Failed to parse AI response. Please try again.');
     }
 
+    // ENSURE SKILLS ARE ARRAYS (Bug fix for e.skills.join is not a function)
+    if (Array.isArray(tailoredData.skillCategories)) {
+      tailoredData.skillCategories = tailoredData.skillCategories.map((cat: any) => {
+        if (typeof cat.skills === 'string') {
+          cat.skills = (cat.skills as string).split(',').map(s => s.trim()).filter(Boolean);
+        }
+        if (!Array.isArray(cat.skills)) {
+          cat.skills = [];
+        }
+        return cat;
+      });
+    }
+
     // Smart merge of skill categories to ensure NO base skill is lost
     let tailoredCategories: any[] = [];
     if (Array.isArray(tailoredData.skillCategories)) {
       tailoredCategories = [...tailoredData.skillCategories];
-    } else {
-      // Fallback if AI returns invalid structure
-      console.warn('AI returned invalid skillCategories structure:', tailoredData.skillCategories);
     }
 
     // Safely extract generated skills for comparison
@@ -250,10 +280,25 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
         gpa: edu.gpa || '' // Empty by default, user can add
       })),
       skills: Array.from(new Set([
-        ...baseResume.skills,
-        ...(tailoredData.skills || [])
+        ...baseSkills,
+        ...(Array.isArray(tailoredData.skills) ? tailoredData.skills : [])
       ])),
       skillCategories: tailoredCategories,
+      projects: (tailoredData.projects || baseResume.projects || []).map((proj: any, index: number) => {
+        const matchingBase = (baseResume.projects || []).find(
+          (base) => base.name.toLowerCase() === proj.name?.toLowerCase()
+        ) || (baseResume.projects || [])[index];
+
+        return {
+          id: matchingBase?.id || `proj-${Date.now()}-${index}`,
+          name: proj.name || matchingBase?.name || '',
+          description: proj.description || matchingBase?.description || '',
+          bullets: proj.bullets || matchingBase?.bullets || [],
+          link: proj.link || matchingBase?.link || '',
+          startDate: proj.startDate || matchingBase?.startDate || '',
+          endDate: proj.endDate || matchingBase?.endDate || ''
+        };
+      }),
       certifications: tailoredData.certifications || baseResume.certifications
     };
 
@@ -377,6 +422,16 @@ export async function parseResumeFromText(text: string): Promise<BaseResume> {
       }
     ],
     "skills": ["Skill 1", "Skill 2"],
+    "projects": [
+      {
+        "name": "Project Name",
+        "description": "Short description",
+        "bullets": ["Bullet 1"],
+        "link": "Link (optional)",
+        "startDate": "Month Year",
+        "endDate": "Month Year"
+      }
+    ],
     "certifications": ["Cert 1", "Cert 2"]
   }
 
@@ -436,6 +491,10 @@ export async function parseResumeFromText(text: string): Promise<BaseResume> {
       education: (parsed.education || []).map((edu: any, i: number) => ({
         ...edu,
         id: `edu-${Date.now()}-${i}`
+      })),
+      projects: (parsed.projects || []).map((proj: any, i: number) => ({
+        ...proj,
+        id: `proj-${Date.now()}-${i}`
       })),
       skills: parsed.skills || [],
       // Initialize empty categories as parsing logic might just dump them in skills

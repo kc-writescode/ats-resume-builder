@@ -300,6 +300,14 @@ function getResumeText(resume: BaseResume): string {
     parts.push(edu.institution);
   });
 
+  if (resume.projects) {
+    resume.projects.forEach(proj => {
+      parts.push(proj.name);
+      parts.push(proj.description);
+      parts.push(...proj.bullets);
+    });
+  }
+
   parts.push(...resume.skills);
   parts.push(...resume.certifications);
 

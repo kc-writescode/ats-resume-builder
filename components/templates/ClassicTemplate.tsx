@@ -264,6 +264,73 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
         ))}
       </div>
 
+      {/* Projects */}
+      {resume.projects && resume.projects.length > 0 && (
+        <div style={{ marginBottom: '6pt' }}>
+          <h2 style={sectionHeaderStyle}>Projects</h2>
+          {resume.projects.map((proj, projIndex) => (
+            <div key={proj.id} style={{ marginBottom: '6pt' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <div>
+                  <span
+                    style={{ fontWeight: 'bold', color: template.colors.primary, ...editableStyle }}
+                    {...editableProps(`projects.${projIndex}.name`)}
+                  >
+                    {proj.name}
+                  </span>
+                  {proj.link && (
+                    <>
+                      <span> | </span>
+                      <span
+                        style={{ fontSize: '9pt', ...editableStyle }}
+                        {...editableProps(`projects.${projIndex}.link`)}
+                      >
+                        {proj.link}
+                      </span>
+                    </>
+                  )}
+                </div>
+                {(proj.startDate || proj.endDate) && (
+                  <div style={{ fontSize: '9pt', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                    <span style={editableStyle} {...editableProps(`projects.${projIndex}.startDate`)}>
+                      {proj.startDate}
+                    </span>
+                    {proj.startDate && proj.endDate && ' - '}
+                    <span style={editableStyle} {...editableProps(`projects.${projIndex}.endDate`)}>
+                      {proj.endDate}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <p
+                style={{ fontSize: '9pt', fontStyle: 'italic', marginBottom: '2pt', ...editableStyle }}
+                {...editableProps(`projects.${projIndex}.description`)}
+              >
+                {proj.description}
+              </p>
+              <ul style={{ marginLeft: '14pt', marginTop: '1pt', paddingLeft: '0', listStyleType: 'disc' }}>
+                {proj.bullets.map((bullet, bulletIndex) => (
+                  <li
+                    key={bulletIndex}
+                    style={{ marginBottom: '1pt', textAlign: 'justify', ...editableStyle }}
+                    {...editableHtmlProps(`projects.${projIndex}.bullets.${bulletIndex}`)}
+                    dangerouslySetInnerHTML={{ __html: bullet }}
+                  />
+                ))}
+              </ul>
+              {editable && (
+                <button
+                  onClick={() => onFieldChange?.(`projects.${projIndex}.bullets`, [...proj.bullets, 'New project highlight...'])}
+                  style={{ color: '#2563eb', fontSize: '9pt', marginTop: '2pt', background: 'none', border: 'none', cursor: 'pointer' }}
+                >
+                  + Add bullet
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Certifications */}
       {resume.certifications.length > 0 && (
         <div>

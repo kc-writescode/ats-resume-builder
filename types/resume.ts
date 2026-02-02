@@ -33,12 +33,23 @@ export interface SkillCategory {
   skills: string[];
 }
 
+export interface ProjectItem {
+  id: string;
+  name: string;
+  description: string;
+  bullets: string[];
+  link?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
 export interface BaseResume {
   personal: PersonalInfo;
   summary: string;
   coreCompetencies?: string[];
   experience: ExperienceItem[];
   education: EducationItem[];
+  projects?: ProjectItem[];
   skills: string[];
   skillCategories?: SkillCategory[];
   certifications: string[];

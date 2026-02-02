@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { BaseResume, PersonalInfo, ExperienceItem, EducationItem } from '@/types/resume';
+import { BaseResume, PersonalInfo, ExperienceItem, EducationItem, ProjectItem } from '@/types/resume';
 import { parseResumeFromText } from '@/lib/ai-service';
 
 interface SetupTabProps {
@@ -48,6 +48,7 @@ export function SetupTab({ baseResume, onSave }: SetupTabProps) {
       setSummary(parsedResume.summary);
       setExperience(parsedResume.experience);
       setEducation(parsedResume.education);
+      setProjects(parsedResume.projects || []);
       setSkills(parsedResume.skills);
       setCertifications(parsedResume.certifications);
 
@@ -77,6 +78,9 @@ export function SetupTab({ baseResume, onSave }: SetupTabProps) {
   );
   const [education, setEducation] = useState<EducationItem[]>(
     baseResume?.education || []
+  );
+  const [projects, setProjects] = useState<ProjectItem[]>(
+    baseResume?.projects || []
   );
   const [skills, setSkills] = useState<string[]>(baseResume?.skills || []);
   const [certifications, setCertifications] = useState<string[]>(
@@ -145,6 +149,45 @@ export function SetupTab({ baseResume, onSave }: SetupTabProps) {
     setEducation(updated);
   };
 
+  const handleAddProject = () => {
+    setProjects([
+      ...projects,
+      {
+        id: `proj-${Date.now()}`,
+        name: '',
+        description: '',
+        bullets: [''],
+        link: '',
+        startDate: '',
+        endDate: ''
+      }
+    ]);
+  };
+
+  const handleUpdateProject = (index: number, field: string, value: any) => {
+    const updated = [...projects];
+    updated[index] = { ...updated[index], [field]: value };
+    setProjects(updated);
+  };
+
+  const handleAddProjectBullet = (projIndex: number) => {
+    const updated = [...projects];
+    updated[projIndex].bullets.push('');
+    setProjects(updated);
+  };
+
+  const handleUpdateProjectBullet = (projIndex: number, bulletIndex: number, value: string) => {
+    const updated = [...projects];
+    updated[projIndex].bullets[bulletIndex] = value;
+    setProjects(updated);
+  };
+
+  const handleRemoveProjectBullet = (projIndex: number, bulletIndex: number) => {
+    const updated = [...projects];
+    updated[projIndex].bullets.splice(bulletIndex, 1);
+    setProjects(updated);
+  };
+
   const handleAddSkill = () => {
     if (skillInput.trim()) {
       setSkills([...skills, skillInput.trim()]);
@@ -165,6 +208,7 @@ export function SetupTab({ baseResume, onSave }: SetupTabProps) {
       summary,
       experience,
       education,
+      projects,
       skills,
       certifications
     };
@@ -428,6 +472,92 @@ export function SetupTab({ baseResume, onSave }: SetupTabProps) {
                 onChange={(e) => handleUpdateEducation(index, 'gpa', e.target.value)}
                 className={inputClasses}
               />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Projects */}
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="text-xl font-semibold text-gray-900">Projects (Optional)</h3>
+          <button
+            onClick={handleAddProject}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          >
+            + Add Project
+          </button>
+        </div>
+
+        {projects.map((proj, projIndex) => (
+          <div key={proj.id} className="border border-gray-200 rounded-lg p-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input
+                type="text"
+                placeholder="Project Name"
+                value={proj.name}
+                onChange={(e) => handleUpdateProject(projIndex, 'name', e.target.value)}
+                className={inputClasses}
+              />
+              <input
+                type="text"
+                placeholder="Link/URL (optional)"
+                value={proj.link}
+                onChange={(e) => handleUpdateProject(projIndex, 'link', e.target.value)}
+                className={inputClasses}
+              />
+              <input
+                type="text"
+                placeholder="Start Date"
+                value={proj.startDate}
+                onChange={(e) => handleUpdateProject(projIndex, 'startDate', e.target.value)}
+                className={inputClasses}
+              />
+              <input
+                type="text"
+                placeholder="End Date"
+                value={proj.endDate}
+                onChange={(e) => handleUpdateProject(projIndex, 'endDate', e.target.value)}
+                className={inputClasses}
+              />
+              <textarea
+                placeholder="Short project description..."
+                value={proj.description}
+                onChange={(e) => handleUpdateProject(projIndex, 'description', e.target.value)}
+                rows={2}
+                className={`${inputClasses} md:col-span-2`}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <label className="text-sm font-medium text-gray-700">Project Highlights</label>
+                <button
+                  onClick={() => handleAddProjectBullet(projIndex)}
+                  className="text-sm text-blue-600 hover:text-blue-700"
+                >
+                  + Add Bullet
+                </button>
+              </div>
+              {proj.bullets.map((bullet, bulletIndex) => (
+                <div key={bulletIndex} className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Describe a key achievement or tool used..."
+                    value={bullet}
+                    onChange={(e) => handleUpdateProjectBullet(projIndex, bulletIndex, e.target.value)}
+                    className={inputClasses.replace("w-full", "flex-1")}
+                  />
+                  {proj.bullets.length > 1 && (
+                    <button
+                      onClick={() => handleRemoveProjectBullet(projIndex, bulletIndex)}
+                      className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         ))}
