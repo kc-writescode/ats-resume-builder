@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { BaseResume, PersonalInfo, ExperienceItem, EducationItem } from '@/types/resume';
+import { parseResumeFromText } from '@/lib/ai-service';
 
 interface SetupTabProps {
   baseResume: BaseResume | null;
@@ -9,6 +10,53 @@ interface SetupTabProps {
 }
 
 export function SetupTab({ baseResume, onSave }: SetupTabProps) {
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      // 1. Extract text from file
+      const parseResponse = await fetch('/api/parse-resume', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!parseResponse.ok) {
+        throw new Error('Failed to parse file content');
+      }
+
+      const { text } = await parseResponse.json();
+
+      // 2. Extract structured data using AI
+      const parsedResume = await parseResumeFromText(text);
+
+      // 3. Populate form
+      setPersonal(parsedResume.personal);
+      setSummary(parsedResume.summary);
+      setExperience(parsedResume.experience);
+      setEducation(parsedResume.education);
+      setSkills(parsedResume.skills);
+      setCertifications(parsedResume.certifications);
+
+      // Clear file input
+      event.target.value = '';
+    } catch (error) {
+      console.error('Upload Error:', error);
+      setUploadError('Failed to parse resume. Please try entering data manually.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const [personal, setPersonal] = useState<PersonalInfo>(
     baseResume?.personal || {
       name: '',
@@ -129,6 +177,44 @@ export function SetupTab({ baseResume, onSave }: SetupTabProps) {
           Enter your complete resume information once. This will be stored locally and used to generate
           tailored resumes for different jobs.
         </p>
+
+        {/* Resume Upload */}
+        <div className="mb-8 p-6 bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl text-center">
+          <input
+            type="file"
+            accept=".pdf,.docx"
+            onChange={handleFileUpload}
+            className="hidden"
+            id="resume-upload"
+            disabled={isUploading}
+          />
+          <label
+            htmlFor="resume-upload"
+            className={`cursor-pointer inline-flex flex-col items-center justify-center ${isUploading ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+          >
+            <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4">
+              {isUploading ? (
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              ) : (
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+              )}
+            </div>
+            <span className="text-lg font-medium text-slate-900 mb-1">
+              {isUploading ? 'Parsing Resume...' : 'Upload Existing Resume'}
+            </span>
+            <span className="text-sm text-slate-500">
+              PDF or DOCX (We'll extract the data for you)
+            </span>
+          </label>
+          {uploadError && (
+            <p className="mt-4 text-sm text-red-600 bg-red-50 p-2 rounded-lg inline-block">
+              {uploadError}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Personal Information */}
