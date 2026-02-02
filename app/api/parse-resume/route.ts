@@ -1,5 +1,5 @@
+
 import { NextRequest, NextResponse } from 'next/server';
-const pdf = require('pdf-parse/lib/pdf-parse.js');
 import mammoth from 'mammoth';
 
 export const dynamic = 'force-dynamic';
@@ -20,6 +20,9 @@ export async function POST(request: NextRequest) {
         let text = '';
 
         if (file.type === 'application/pdf') {
+            // Dynamic import to avoid build issues with CJS/ESM compatibility
+            const pdfModule = await import('pdf-parse');
+            const pdf = (pdfModule as any).default || pdfModule;
             const data = await pdf(buffer);
             text = data.text;
         } else if (
