@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022', // Claude 3.5 Sonnet for better instruction-following
+        model: 'claude-sonnet-4-5-20250929', // Claude Sonnet 4.5 - latest recommended model
         max_tokens,
         system,
         messages
