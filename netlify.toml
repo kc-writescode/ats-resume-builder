@@ -2,5 +2,13 @@
   command = "npm run build"
   publish = ".next"
 
+[functions]
+  # Extend timeout for AI generation (default is 10s, we need more for Claude)
+  external_node_modules = ["@anthropic-ai/sdk"]
+
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+# Set function timeout to maximum allowed (26 seconds for free tier, 60 for paid)
+[functions."*"]
+  timeout = 26

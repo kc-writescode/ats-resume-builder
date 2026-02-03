@@ -171,11 +171,26 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'API request failed');
+      const responseText = await response.text();
+      // Check if we got an HTML response (usually means timeout or 404)
+      if (responseText.trim().startsWith('<')) {
+        throw new Error('Request timed out. Please try again with a shorter job description.');
+      }
+      try {
+        const error = JSON.parse(responseText);
+        throw new Error(error.error?.message || 'API request failed');
+      } catch {
+        throw new Error('API request failed. Please try again.');
+      }
     }
 
-    const data = await response.json();
+    const responseText = await response.text();
+    // Check if we got HTML instead of JSON (timeout/error page)
+    if (responseText.trim().startsWith('<')) {
+      throw new Error('Request timed out. Please try again with a shorter job description.');
+    }
+
+    const data = JSON.parse(responseText);
     const content = data.content[0].text;
 
     // Parse the JSON response
