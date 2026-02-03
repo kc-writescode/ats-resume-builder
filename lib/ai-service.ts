@@ -5,95 +5,60 @@ import { BaseResume, JobDescription } from '@/types/resume';
 const SYSTEM_PROMPT = `You are an expert resume writer and ATS optimization specialist. Tailor resumes to job descriptions while maintaining authenticity.
 
 **BULLET POINT GUIDELINES (CRITICAL)**:
-1. **PRESERVE & ENHANCE**: You must NOT remove any bullet points from the base resume. Reframe them to differentiate and include high-impact keywords.
-2. **VERB VARIATION**: Do NOT use the same verb twice in a role. AVOID over-using "Built". Use strong, varied synonyms: *Architected, Engineered, Orchestrated, Pionereed, Spearheaded, Optimized, Deployed*.
-3. **METRIC CONTEXT**: If a metric is used (e.g. "30%"), you MUST specify WHAT improved (e.g. "reduced query execution time by 30%"). Avoid vague metrics like "improved efficiency".
-4. **KEYWORDS**: Naturally weave in 2-3 specific keywords from the job description per bullet.
-5. **TONE**: Sound human. Remove generic phrases like "Created optimized" or "Designed". Use "Engineered scalable solutions" instead.
-6. **FORMAT**: Preserves existing metrics but clarifies them.
-7. **DO NOT REMOVE**: Never reduce the number of bullet points.
+1. **JD ALIGNMENT**: Reframe every bullet point (Work Experience AND Projects) to directly mirror the responsibilities and requirements in the Job Description. If the JD asks for "Scalable APIs", ensure your experience with backend services is described as "Engineering scalable APIs".
+2. **NO AI SLOP**: Avoid overused AI buzzwords: "leveraged", "pioneered", "testament", "unparalleled", "comprehensive", "robust", "synergy", "paradigm", "spearheaded", "orchestrated", "driving", "passionate". Use strong, active, human verbs: *Designed, Built, Implemented, Improved, Reduced, Increased, Led, Delivered, Analyzed*.
+3. **VERB VARIATION**: Do NOT use the same verb twice in a role.
+4. **METRIC CONTEXT**: Every bullet should ideally follow the [Action] + [Context] + [Result/Metric] format. Specify WHAT improved (e.g. "reduced query latency by 30%").
+5. **KEYWORDS**: Naturally weave in keywords. Do not "keyword stuff".
+6. **TONE**: Sound like an experienced professional, not a chatbot. Be direct and avoid flowery language. Check for grammar and spelling meticulously.
+7. **DO NOT REMOVE**: Never reduce the number of bullet points from the base resume. You MUST include every entry.
+
+**KEYWORD TRACKING**:
+- You must identify exactly which keywords from the Job Description you've added or emphasized in the resume.
+- Map these to the specific section and context where they were added.
 
 **SUMMARY GUIDELINES**:
-- **NARRATIVE**: Create a unifying theme/value proposition (e.g., "Data Engineer specializing in scalable healthcare platforms...").
-- **CONCISENESS**: Break into 2-3 concise, focused sentences. AVOID large blocks of text.
-- **SPECIFICITY**: Use exact years (e.g., "5 years", not "5+ years").
-- **HARD SKILLS**: Integrate top 3 hard skills immediately.
-- **NO FLUFF**: BAN generic phrases like "adept at delivering actionable insights" or "driving data-centric initiatives". Be specific: "delivering real-time clinical insights".
-- **DEDUPLICATION**: Do NOT repeat soft skills verbatim from the Soft Skills section (e.g., "cross-functional collaboration").
+- Create a unifying theme/value proposition tailored to the role.
+- 2-3 concise, focused sentences. No generic fluff.
+- Integrate top 3 hard skills immediately.
 
-**SKILLS GUIDELINES**:
-1. **CATEGORIZATION**: Group into these SPECIFIC categories: 
-   - For AI/ML Roles: 'Programming Languages', 'Machine Learning & AI Algorithms', 'Generative AI & Large Language Models', 'MLOps & ML Engineering', 'Analytical & Development Tools', 'Databases & Data Stores', 'Vector Databases', 'Big Data & Streaming Frameworks', 'Cloud Platforms & DevOps', 'Data Visualization & BI', 'Version Control & CI/CD', 'Operating Systems', 'Security, Privacy & Governance'.
-   - For General Tech Roles: 'Cloud Platforms', 'Data Processing & Orchestration', 'Databases & Warehousing', 'BI & Visualization', 'Languages', 'DevOps & IaC', 'Soft Skills'.
-2. **FORMAT CONSISTENCY**: Use consistent formatting (Colons for categories, commas for individual skills). AVOID mixing formats or dense paragraphs.
-3. **DEDUPLICATION**: MERGE redundant terms. Use standard industry terms:
-   - Use "SQL" (not "Sql" or "sql").
-   - Use "GitHub" (merge "Git" and "GitHub").
-   - Use "Airflow" (merge "Apache Airflow" and "Airflow").
-   - Use "Tableau" (merge "Tableau Process").
-   - Use "GCP" (not "Platform (GCP)").
-   - For AI: Use "LLMs", "RAG", "Fine-Tuning", "Vector Search" (merge similar terms).
-4. **DENSITY**: Limit to 8-10 most relevant skills per category. Do not dump every tool ever used.
-5. **SOFT SKILLS**: Use unique executive phrasing NOT found in the summary.
-6. **MANDATORY**: Include all base resume skills but categorize them strictly.
-
-**CORE COMPETENCIES GUIDELINES**:
-1. **FOCUS**: High-Level Architectural Concepts and Domain Expertise (e.g. "Scalable Data Pipelines", "LLM Orchestration", "Predictive Analytics Systems").
-2. **NO TOOLS**: Do NOT list specific tools (Python, SQL) here; keep those in Technical Skills. Avoid redundancy.
-3. NO Soft Skills (e.g., "Leadership", "Communication") in this section.
-4. NO Generic Terms (e.g., "Development", "Programming").
-5. Max 8-10 top-tier technical keywords separated by pipes.
-
-**EDUCATION GUIDELINES**:
-- Include degree, institution, and graduation date.
-- Include GPA only if notable (3.8+) or recently graduated.
-- Highlighting relevant academic projects or theses is encouraged for research-heavy roles.
+**SKILLS & CORE COMPETENCIES**:
+- Strictly follow the categorization guidelines for Technical Skills.
+- Core Competencies should be high-level concepts (e.g., "Distributed System Design"), never tools.
 
 **GENERAL RULES**:
-- **DATES**: Use "Present" for current roles (NOT "Till Date").
-- **FORMAT**: No pipe Separators in contact info if possible (handled by frontend, but keep text clean).
-- **TEXT**: No em dashes.
+- No em dashes. No pipe separators in contact info.
+- Use "Present" for current roles.
+- Dates must be consistent.
 
-Return ONLY valid JSON:
+Return ONLY valid JSON with this structure:
 {
-  "summary": "Professional summary tailored to role...",
+  "summary": "...",
   "experience": [
     {
-      "title": "Job Title (keep original from base resume)",
-      "company": "Company Name",
-      "location": "City, State",
-      "startDate": "Month Year",
-      "endDate": "Month Year",
-      "bullets": ["Substantive bullet..."]
+      "title": "...",
+      "company": "...",
+      "location": "...",
+      "startDate": "...",
+      "endDate": "...",
+      "bullets": ["..."]
     }
   ],
-  "skills": ["Skill 1", "Skill 2"],
-  "skillCategories": [
-    {"category": "Languages", "skills": ["Python"]},
-    {"category": "Data & Analytics", "skills": ["SQL", "Power BI"]}
-  ],
-  "education": [
+  "skills": ["..."],
+  "skillCategories": [{"category": "...", "skills": ["..."]}],
+  "education": [...],
+  "projects": [...],
+  "certifications": [...],
+  "keywordInsights": [
     {
-      "degree": "Degree Name",
-      "institution": "School Name",
-      "graduationDate": "Year or Month Year",
-      "gpa": "GPA (optional)"
+      "keyword": "The specific keyword added",
+      "section": "Section name (e.g. Experience: Google, Summary, Skills)",
+      "context": "The specific bullet point or phrase where it was used"
     }
-  ],
-  "projects": [
-    {
-      "name": "Project Name",
-      "description": "Short description",
-      "bullets": ["Bullet 1"],
-      "link": "Link (optional)",
-      "startDate": "Month Year",
-      "endDate": "Month Year"
-    }
-  ],
-  "certifications": ["Certification 1"]
+  ]
 }
 
-CRITICAL: Preserve ALL experience entries from the base resume with their exact title, company, location, and dates. Preserve ALL original bullet points (enhanced/reframed) and ADD new ones where relevant.`;
+CRITICAL: Preserve ALL experience entries from the base resume with their exact title, company, location, and dates. Preserve ALL original bullet points (enhanced/reframed) and ADD new ones where relevant. Ensure the tone is human and professional. Avoid AI-sounding words like 'spearheaded' or 'leveraged' unless they are the most natural choice.`;
 
 export async function generateTailoredResume(
   baseResume: BaseResume,
@@ -122,16 +87,12 @@ ${jobDescription.requiredSkills.slice(0, 10).join(', ')}
 ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
 
 **INSTRUCTIONS:**
-1. **SUMMARY**: Construct a high-impact professional summary. Start with "Experienced [Target Job Title] with [Number] years of experience...". Integrate top hard skills immediately. Focus on VALUE added to the company. Keep it to 2-3 concise sentences.
-2. **CAREER NARRATIVE**: Create a strong narrative of career progression—from foundational software engineering to applied research to leading specialized architecture (e.g., GenAI). Highlight increasing responsibility and strategic influence.
-3. **ROLE TAILORING**: Tailor the content sharply for ${jobDescription.jobTitle}. Emphasize core competencies that align directly with this specific target role.
-4. **AI/ML SKILLS**: If relevant, ensure inclusion of keywords like: LLMs, RAG, Prompt Engineering, LangChain, LlamaIndex, Fine-Tuning (LoRA), Vector Search, Model Deployment, MLOps, MLflow, PyTorch, TensorFlow, Scikit-learn, Transformers, Computer Vision, NLP.
-5. **SOFT SKILLS**: No generic terms. Use phrases like "Cross-functional Leadership", "Strategic Problem Solving".
-6. **CATEGORIZATION**: Group skills into these categories: ${skillCategories}.
-7. **SKILL BREAKDOWN**: Break down broad skills into specific tools, libraries, or sub-concepts in parentheses (e.g., "Python (NumPy, SciPy, Pandas)", "Generative AI (LLMs, RAG, Fine-tuning)").
-8. **BULLETS**: ENHANCE with diverse verbs (Architected, Engineered, Spearheaded). No "Built" repetition. Clarify metrics.
-9. NO duplicates.
-10. Sound professional and human.`;
+1. **ALIGNMENT**: Reframe work experience and project bullets to match the specific needs of the job description. If they need "Node.js optimization", and you have "Worked on Node.js", reframe it to "Optimized Node.js backend performance...".
+2. **HUMAN TONE**: Check for grammar and spelling. Eliminate "AI-sounding" words. Use active, professional language.
+3. **KEYWORD TRACKING**: In the 'keywordInsights' section of the JSON, list at least 10-15 keywords you've integrated, where you placed them, and why.
+4. **SUMMARY**: Construct a high-impact summary starting with "Experienced [Target Title]...".
+5. **CATEGORIZATION**: Use these categories: ${skillCategories}.
+6. **PRESERVATION**: Do not lose any information from the base resume. Only enhance and reframe.`;
 
   try {
     const response = await fetch('/api/generate', {
@@ -322,7 +283,8 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
           endDate: proj.endDate || matchingBase?.endDate || ''
         };
       }),
-      certifications: tailoredData.certifications || baseResume.certifications
+      certifications: tailoredData.certifications || baseResume.certifications,
+      keywordInsights: tailoredData.keywordInsights || []
     };
 
     return validateAndCleanResume(tailoredResume);
@@ -353,7 +315,13 @@ function validateAndCleanResume(resume: BaseResume): BaseResume {
       institution: cleanText(edu.institution)
     })),
     skills: resume.skills.map(cleanText),
-    certifications: resume.certifications.map(cleanText)
+    certifications: resume.certifications.map(cleanText),
+    keywordInsights: resume.keywordInsights?.map(insight => ({
+      ...insight,
+      keyword: cleanText(insight.keyword),
+      section: cleanText(insight.section),
+      context: cleanText(insight.context)
+    }))
   };
 }
 

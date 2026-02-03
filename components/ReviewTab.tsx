@@ -5,6 +5,7 @@ import { GeneratedResume, BaseResume } from '@/types/resume';
 import { analyzeATSCompatibility, extractKeywordsFromJobDescription } from '@/lib/ats-analyzer';
 import { getTemplateComponent } from './templates';
 import { BoldToolbar } from './BoldToolbar';
+import { KeywordInsights } from './KeywordInsights';
 
 interface ReviewTabProps {
   resume: GeneratedResume;
@@ -77,11 +78,10 @@ export function ReviewTab({ resume, onExport, onEdit }: ReviewTabProps) {
         </div>
         <button
           onClick={() => setEditMode(!editMode)}
-          className={`px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 ${
-            editMode
-              ? 'bg-green-600 text-white hover:bg-green-700'
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }`}
+          className={`px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 ${editMode
+            ? 'bg-green-600 text-white hover:bg-green-700'
+            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
         >
           {editMode ? (
             <>
@@ -105,11 +105,10 @@ export function ReviewTab({ resume, onExport, onEdit }: ReviewTabProps) {
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">ATS Compatibility Score</h3>
-          <div className={`text-4xl font-bold ${
-            atsScore.overall >= 85 ? 'text-green-600' :
+          <div className={`text-4xl font-bold ${atsScore.overall >= 85 ? 'text-green-600' :
             atsScore.overall >= 70 ? 'text-yellow-600' :
-            'text-red-600'
-          }`}>
+              'text-red-600'
+            }`}>
             {atsScore.overall}
           </div>
         </div>
@@ -147,6 +146,11 @@ export function ReviewTab({ resume, onExport, onEdit }: ReviewTabProps) {
           </div>
         )}
       </div>
+
+      {/* Keyword Optimization Insights */}
+      {resume.content.keywordInsights && resume.content.keywordInsights.length > 0 && (
+        <KeywordInsights insights={resume.content.keywordInsights} />
+      )}
 
       {/* Bold Toolbar for Edit Mode */}
       <BoldToolbar enabled={editMode} />

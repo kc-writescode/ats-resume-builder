@@ -19,6 +19,12 @@ export interface ExperienceItem {
   bullets: string[];
 }
 
+export interface KeywordInsight {
+  keyword: string;
+  section: string;
+  context: string;
+}
+
 export interface EducationItem {
   id: string;
   degree: string;
@@ -53,6 +59,7 @@ export interface BaseResume {
   skills: string[];
   skillCategories?: SkillCategory[];
   certifications: string[];
+  keywordInsights?: KeywordInsight[];
 }
 
 export interface GeneratedResume {
