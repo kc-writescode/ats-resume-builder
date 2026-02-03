@@ -58,6 +58,7 @@ If JD mentions "machine learning infrastructure":
 **SKILLS & CORE COMPETENCIES**:
 - Follow the specified categorization
 - Core Competencies = high-level concepts, not tools
+- ALWAYS use proper capitalization for acronyms: LLM (not llm/Llm), NLP (not nlp/Nlp), SQL (not sql/Sql), API, AWS, GCP, ETL, ML, AI, RAG, GPU, CPU, REST, CI/CD, K8s, NoSQL
 
 **OUTPUT FORMAT**:
 Return ONLY valid JSON:
@@ -367,10 +368,46 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
   }
 }
 
+// Map of acronyms that should always be uppercase
+const ACRONYM_MAP: Record<string, string> = {
+  'llm': 'LLM', 'llms': 'LLMs',
+  'nlp': 'NLP',
+  'sql': 'SQL', 'nosql': 'NoSQL', 'mysql': 'MySQL', 'postgresql': 'PostgreSQL', 'mssql': 'MSSQL',
+  'api': 'API', 'apis': 'APIs', 'rest': 'REST', 'restful': 'RESTful',
+  'aws': 'AWS', 'gcp': 'GCP', 'azure': 'Azure',
+  'etl': 'ETL', 'elt': 'ELT',
+  'ml': 'ML', 'ai': 'AI', 'rag': 'RAG',
+  'gpu': 'GPU', 'gpus': 'GPUs', 'cpu': 'CPU', 'cpus': 'CPUs',
+  'ci/cd': 'CI/CD', 'cicd': 'CI/CD',
+  'k8s': 'K8s', 'kubernetes': 'Kubernetes',
+  'html': 'HTML', 'css': 'CSS', 'json': 'JSON', 'xml': 'XML', 'yaml': 'YAML',
+  'http': 'HTTP', 'https': 'HTTPS', 'ssh': 'SSH', 'ssl': 'SSL', 'tls': 'TLS',
+  'sdk': 'SDK', 'ide': 'IDE', 'orm': 'ORM',
+  'kpi': 'KPI', 'kpis': 'KPIs', 'roi': 'ROI',
+  'saas': 'SaaS', 'paas': 'PaaS', 'iaas': 'IaaS',
+  'jdbc': 'JDBC', 'odbc': 'ODBC',
+  'dag': 'DAG', 'dags': 'DAGs',
+  'sla': 'SLA', 'slas': 'SLAs',
+  'bi': 'BI',
+  'cnn': 'CNN', 'rnn': 'RNN', 'lstm': 'LSTM', 'gpt': 'GPT',
+};
+
+// Normalize acronym casing in a string
+function normalizeAcronyms(text: string): string {
+  let result = text;
+  // Match whole words only (case-insensitive)
+  for (const [lower, proper] of Object.entries(ACRONYM_MAP)) {
+    // Create a regex that matches the word with word boundaries
+    const regex = new RegExp(`\\b${lower}\\b`, 'gi');
+    result = result.replace(regex, proper);
+  }
+  return result;
+}
+
 function validateAndCleanResume(resume: BaseResume): BaseResume {
-  // Remove em dashes and en dashes
+  // Remove em dashes and en dashes, and normalize acronyms
   const cleanText = (text: string): string => {
-    return text.replace(/—/g, '-').replace(/–/g, '-');
+    return normalizeAcronyms(text.replace(/—/g, '-').replace(/–/g, '-'));
   };
 
   return {
@@ -388,6 +425,11 @@ function validateAndCleanResume(resume: BaseResume): BaseResume {
       institution: cleanText(edu.institution)
     })),
     skills: resume.skills.map(cleanText),
+    skillCategories: resume.skillCategories?.map(cat => ({
+      ...cat,
+      category: cleanText(cat.category),
+      skills: cat.skills.map(cleanText)
+    })),
     certifications: resume.certifications.map(cleanText),
     keywordInsights: resume.keywordInsights?.map(insight => ({
       ...insight,
