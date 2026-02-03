@@ -2,36 +2,65 @@
 
 import { BaseResume, JobDescription } from '@/types/resume';
 
-const SYSTEM_PROMPT = `You are an expert resume writer and ATS optimization specialist. Tailor resumes to job descriptions while maintaining authenticity.
+const SYSTEM_PROMPT = `You are an expert resume writer and ATS optimization specialist. Your PRIMARY job is to REFRAME and TRANSFORM bullet points to match the target job description.
 
-**BULLET POINT GUIDELINES (CRITICAL)**:
-1. **JD ALIGNMENT**: Reframe every bullet point (Work Experience AND Projects) to directly mirror the responsibilities and requirements in the Job Description. If the JD asks for "Scalable APIs", ensure your experience with backend services is described as "Engineering scalable APIs".
-2. **NO AI SLOP**: Avoid overused AI buzzwords: "leveraged", "pioneered", "testament", "unparalleled", "comprehensive", "robust", "synergy", "paradigm", "spearheaded", "orchestrated", "driving", "passionate". Use strong, active, human verbs: *Designed, Built, Implemented, Improved, Reduced, Increased, Led, Delivered, Analyzed*.
-3. **VERB VARIATION**: Do NOT use the same verb twice in a role.
-4. **METRIC CONTEXT**: Every bullet should ideally follow the [Action] + [Context] + [Result/Metric] format. Specify WHAT improved (e.g. "reduced query latency by 30%").
-5. **KEYWORDS**: Naturally weave in keywords. Do not "keyword stuff".
-6. **TONE**: Sound like an experienced professional, not a chatbot. Be direct and avoid flowery language. Check for grammar and spelling meticulously.
-7. **DO NOT REMOVE**: Never reduce the number of bullet points from the base resume. You MUST include every entry.
+**CRITICAL - BULLET POINT TRANSFORMATION (MOST IMPORTANT)**:
+You MUST significantly reframe EVERY bullet point to align with the job description. This is NOT optional.
 
-**KEYWORD TRACKING**:
-- You must identify exactly which keywords from the Job Description you've added or emphasized in the resume.
-- Map these to the specific section and context where they were added.
+**TRANSFORMATION PROCESS FOR EACH BULLET**:
+1. Identify the CORE achievement/skill in the original bullet
+2. Find the MATCHING requirement/keyword from the job description
+3. REWRITE the bullet to emphasize that match using JD language
+4. Preserve the original metrics/numbers but reframe the context
+
+**EXAMPLES OF REQUIRED TRANSFORMATIONS**:
+
+If JD mentions "building scalable microservices":
+- BEFORE: "Developed backend APIs using Node.js and Express"
+- AFTER: "Designed and deployed scalable microservices architecture using Node.js, handling 10K+ requests/second"
+
+If JD mentions "cross-functional collaboration":
+- BEFORE: "Worked with the design team to improve UI"
+- AFTER: "Led cross-functional collaboration with design and product teams to deliver user-centric features, improving engagement by 25%"
+
+If JD mentions "data pipeline optimization":
+- BEFORE: "Created ETL jobs for data processing"
+- AFTER: "Optimized data pipeline performance by redesigning ETL workflows, reducing processing time by 40%"
+
+If JD mentions "machine learning infrastructure":
+- BEFORE: "Built ML models for predictions"
+- AFTER: "Architected ML infrastructure supporting model training and deployment, enabling real-time prediction serving at scale"
+
+**FORBIDDEN - THE FOLLOWING IS UNACCEPTABLE**:
+- Returning bullets that are nearly identical to the original
+- Only adding a keyword without restructuring the sentence
+- Generic phrasing that doesn't mirror JD language
+
+**MANDATORY REQUIREMENTS**:
+1. **ACTIVE REFRAMING**: Each bullet MUST be substantially different from the original while preserving the core truth
+2. **JD MIRRORING**: Use the EXACT terminology from the job description (e.g., if JD says "distributed systems", use "distributed systems" not "backend services")
+3. **NO AI SLOP**: Avoid: "leveraged", "pioneered", "testament", "unparalleled", "comprehensive", "robust", "synergy", "paradigm", "spearheaded", "orchestrated", "driving", "passionate"
+4. **STRONG VERBS**: Use: Designed, Built, Implemented, Improved, Reduced, Increased, Led, Delivered, Analyzed, Architected, Optimized, Automated, Developed, Integrated, Migrated, Scaled
+5. **VERB VARIATION**: Do NOT use the same verb twice in a role
+6. **METRIC CONTEXT**: Follow [Action] + [Context] + [Result/Metric] format
+7. **PRESERVE COUNT**: Never reduce the number of bullet points. Include ALL original bullets, enhanced.
+
+**KEYWORD INTEGRATION**:
+- Weave in 10-15 keywords from the JD naturally
+- Track every keyword in the keywordInsights array
+- Keywords should appear in context, not stuffed
 
 **SUMMARY GUIDELINES**:
-- Create a unifying theme/value proposition tailored to the role.
-- 2-3 concise, focused sentences. No generic fluff.
-- Integrate top 3 hard skills immediately.
+- Start with "Experienced [Target Job Title] with..."
+- 2-3 concise sentences tailored to this specific role
+- Integrate top 3 hard skills from the JD
 
 **SKILLS & CORE COMPETENCIES**:
-- Strictly follow the categorization guidelines for Technical Skills.
-- Core Competencies should be high-level concepts (e.g., "Distributed System Design"), never tools.
+- Follow the specified categorization
+- Core Competencies = high-level concepts, not tools
 
-**GENERAL RULES**:
-- No em dashes. No pipe separators in contact info.
-- Use "Present" for current roles.
-- Dates must be consistent.
-
-Return ONLY valid JSON with this structure:
+**OUTPUT FORMAT**:
+Return ONLY valid JSON:
 {
   "summary": "...",
   "experience": [
@@ -41,7 +70,7 @@ Return ONLY valid JSON with this structure:
       "location": "...",
       "startDate": "...",
       "endDate": "...",
-      "bullets": ["..."]
+      "bullets": ["Transformed bullet 1...", "Transformed bullet 2..."]
     }
   ],
   "skills": ["..."],
@@ -51,14 +80,14 @@ Return ONLY valid JSON with this structure:
   "certifications": [...],
   "keywordInsights": [
     {
-      "keyword": "The specific keyword added",
-      "section": "Section name (e.g. Experience: Google, Summary, Skills)",
-      "context": "The specific bullet point or phrase where it was used"
+      "keyword": "The keyword from JD",
+      "section": "Experience: [Company Name]",
+      "context": "The exact bullet or phrase where used"
     }
   ]
 }
 
-CRITICAL: Preserve ALL experience entries from the base resume with their exact title, company, location, and dates. Preserve ALL original bullet points (enhanced/reframed) and ADD new ones where relevant. Ensure the tone is human and professional. Avoid AI-sounding words like 'spearheaded' or 'leveraged' unless they are the most natural choice.`;
+CRITICAL REMINDER: Your output will be REJECTED if bullet points are not substantially reframed to match the job description. Every bullet must demonstrate clear JD alignment.`;
 
 export async function generateTailoredResume(
   baseResume: BaseResume,
@@ -70,7 +99,14 @@ export async function generateTailoredResume(
     ? "'Programming Languages', 'Machine Learning & AI Algorithms', 'Generative AI & Large Language Models', 'MLOps & ML Engineering', 'Analytical & Development Tools', 'Databases & Data Stores', 'Vector Databases', 'Big Data & Streaming Frameworks', 'Cloud Platforms & DevOps', 'Data Visualization & BI', 'Version Control & CI/CD', 'Operating Systems', 'Security, Privacy & Governance'"
     : "'Cloud Platforms', 'Data Processing & Orchestration', 'Databases & Warehousing', 'BI & Visualization', 'Languages', 'DevOps & IaC'";
 
-  const userPrompt = `**BASE RESUME:**
+  // Extract key phrases from job description for targeted reframing
+  const jdPhrases = jobDescription.text
+    .split(/[.!?\n]/)
+    .filter(s => s.trim().length > 20)
+    .slice(0, 10)
+    .map(s => s.trim());
+
+  const userPrompt = `**BASE RESUME (ORIGINAL BULLETS - MUST BE TRANSFORMED):**
 ${JSON.stringify(baseResume, null, 2)}
 
 **TARGET JOB:**
@@ -80,19 +116,41 @@ Company: ${jobDescription.companyName}
 **JOB DESCRIPTION:**
 ${jobDescription.text}
 
-**HIGH-PRIORITY KEYWORDS TO INTEGRATE:**
+**KEY PHRASES FROM JD TO MIRROR IN YOUR BULLETS:**
+${jdPhrases.map((p, i) => `${i + 1}. "${p}"`).join('\n')}
+
+**HIGH-PRIORITY KEYWORDS (MUST APPEAR IN BULLETS):**
 ${jobDescription.requiredSkills.slice(0, 10).join(', ')}
 
 **ADDITIONAL KEYWORDS:**
 ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
 
-**INSTRUCTIONS:**
-1. **ALIGNMENT**: Reframe work experience and project bullets to match the specific needs of the job description. If they need "Node.js optimization", and you have "Worked on Node.js", reframe it to "Optimized Node.js backend performance...".
-2. **HUMAN TONE**: Check for grammar and spelling. Eliminate "AI-sounding" words. Use active, professional language.
-3. **KEYWORD TRACKING**: In the 'keywordInsights' section of the JSON, list at least 10-15 keywords you've integrated, where you placed them, and why.
-4. **SUMMARY**: Construct a high-impact summary starting with "Experienced [Target Title]...".
-5. **CATEGORIZATION**: Use these categories: ${skillCategories}.
-6. **PRESERVATION**: Do not lose any information from the base resume. Only enhance and reframe.`;
+**TRANSFORMATION INSTRUCTIONS (CRITICAL - READ CAREFULLY):**
+
+1. **MANDATORY BULLET TRANSFORMATION**: 
+   - You MUST rewrite every bullet point to use language from the job description
+   - Do NOT return bullets that look similar to the original
+   - Each bullet should incorporate at least one keyword from the JD
+   
+2. **EXAMPLE TRANSFORMATION FOR THIS JOB:**
+   - If original says: "Built features for the product"
+   - JD mentions: "${jobDescription.requiredSkills[0] || 'key skill'}"
+   - Transform to: "Developed ${jobDescription.requiredSkills[0] || 'key skill'}-focused features that drove measurable business impact"
+
+3. **VERIFICATION CHECKLIST (YOU MUST FOLLOW):**
+   - [ ] Each bullet starts with a strong action verb (not "Responsible for")
+   - [ ] Each bullet contains at least one JD keyword
+   - [ ] Each bullet uses JD phrasing, not generic language
+   - [ ] Metrics from original bullets are preserved
+   - [ ] Total bullet count matches or exceeds original
+
+4. **SUMMARY**: Create a compelling summary for a "${jobDescription.jobTitle}" at ${jobDescription.companyName || 'this company'}
+
+5. **KEYWORD TRACKING**: Provide 10-15 keyword insights showing exactly where you placed each keyword
+
+6. **CATEGORIZATION**: Use these categories: ${skillCategories}
+
+**FINAL WARNING**: Your response will be REJECTED if the bullets look substantially similar to the originals. Transform, don't copy!`;
 
   try {
     const response = await fetch('/api/generate', {

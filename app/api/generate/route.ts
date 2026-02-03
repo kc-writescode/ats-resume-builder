@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-haiku-20240307', // Switch to Haiku for debugging/stability
+        model: 'claude-sonnet-4-20250514', // Using Sonnet for better instruction-following
         max_tokens,
         system,
         messages
