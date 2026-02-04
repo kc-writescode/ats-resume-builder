@@ -103,42 +103,82 @@ export function ReviewTab({ resume, onExport, onEdit }: ReviewTabProps) {
 
       {/* ATS Score Dashboard */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">ATS Compatibility Score</h3>
-          <div className={`text-4xl font-bold ${atsScore.overall >= 85 ? 'text-green-600' :
-            atsScore.overall >= 70 ? 'text-yellow-600' :
-              'text-red-600'
-            }`}>
-            {atsScore.overall}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">ATS Compatibility Score</h3>
+            <p className="text-sm text-gray-600 mt-1">
+              Higher scores increase your chances of passing automated screening
+            </p>
+          </div>
+          <div className="text-center">
+            <div className={`text-5xl font-bold ${atsScore.overall >= 85 ? 'text-green-600' :
+                atsScore.overall >= 70 ? 'text-amber-500' :
+                  'text-red-500'
+              }`}>
+              {atsScore.overall}
+            </div>
+            <div className={`text-xs font-medium mt-1 px-3 py-1 rounded-full ${atsScore.overall >= 85 ? 'bg-green-100 text-green-700' :
+                atsScore.overall >= 70 ? 'bg-amber-100 text-amber-700' :
+                  'bg-red-100 text-red-700'
+              }`}>
+              {atsScore.overall >= 85 ? 'Excellent' :
+                atsScore.overall >= 70 ? 'Good' :
+                  'Needs Improvement'}
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-          <div>
-            <p className="text-sm text-gray-600">Keyword Match</p>
-            <p className="text-xl font-semibold">{atsScore.keywordMatch}%</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Format</p>
-            <p className="text-xl font-semibold">{atsScore.formatCompatibility}%</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Completeness</p>
-            <p className="text-xl font-semibold">{atsScore.sectionCompleteness}%</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Quality</p>
-            <p className="text-xl font-semibold">{atsScore.contentQuality}%</p>
-          </div>
+        {/* Score Breakdown with Progress Bars */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          {[
+            { label: 'Keyword Match', value: atsScore.keywordMatch, icon: '🎯', weight: '45%' },
+            { label: 'Content Quality', value: atsScore.contentQuality, icon: '📝', weight: '20%' },
+            { label: 'Format', value: atsScore.formatCompatibility, icon: '✅', weight: '20%' },
+            { label: 'Completeness', value: atsScore.sectionCompleteness, icon: '📋', weight: '15%' },
+          ].map((metric, idx) => (
+            <div key={idx} className="bg-white rounded-lg p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-600 flex items-center gap-1">
+                  <span>{metric.icon}</span>
+                  {metric.label}
+                </span>
+                <span className="text-xs text-gray-400">({metric.weight})</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-500 ${metric.value >= 80 ? 'bg-green-500' :
+                        metric.value >= 60 ? 'bg-amber-500' :
+                          'bg-red-500'
+                      }`}
+                    style={{ width: `${metric.value}%` }}
+                  />
+                </div>
+                <span className={`text-lg font-bold min-w-[3rem] text-right ${metric.value >= 80 ? 'text-green-600' :
+                    metric.value >= 60 ? 'text-amber-600' :
+                      'text-red-600'
+                  }`}>
+                  {metric.value}%
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
 
         {atsScore.suggestions.length > 0 && (
-          <div className="bg-white rounded-lg p-4">
-            <p className="font-medium text-gray-900 mb-2">Suggestions:</p>
-            <ul className="space-y-1">
+          <div className="bg-white rounded-lg p-4 border border-gray-100">
+            <p className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+              Quick Wins to Improve Your Score:
+            </p>
+            <ul className="space-y-2">
               {atsScore.suggestions.map((suggestion, index) => (
-                <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
-                  <span className="text-blue-600">-</span>
+                <li key={index} className="text-sm text-gray-700 flex items-start gap-2 bg-slate-50 rounded-lg p-3">
+                  <span className="flex-shrink-0 w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                    {index + 1}
+                  </span>
                   <span>{suggestion}</span>
                 </li>
               ))}
