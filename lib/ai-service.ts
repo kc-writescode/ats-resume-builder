@@ -24,7 +24,7 @@ You MUST significantly reframe EVERY bullet point to align with the job descript
 
 **BULLET POINT STRUCTURE (ATS-OPTIMIZED)**:
 Format: [Strong Verb] + [What You Did] + [Using What Technology/Skill] + [Quantified Result]
-- Length: 80-150 characters (optimal for ATS parsing)
+- STRICT LENGTH: 80-120 characters per bullet (NEVER exceed 150 characters)
 - Include at least 40% of bullets with quantified metrics (%, $, numbers)
 - Start with varied action verbs - never repeat within same role
 
@@ -175,7 +175,9 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
 
 6. **CATEGORIZATION**: Use these categories: ${skillCategories}
 
-**FINAL WARNING**: Your response will be REJECTED if the bullets look substantially similar to the originals. Transform, don't copy!`;
+**FINAL WARNING**: Your response will be REJECTED if bullet points are not substantially reframed to match the job description. Transform, don't copy!
+
+**OUTPUT SIZE WARNING**: Keep bullets concise (80-120 chars each). Do not be overly verbose. Complete the FULL JSON response.`;
 
   try {
     const response = await fetch('/api/generate', {
@@ -184,7 +186,7 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        max_tokens: 4000,
+        max_tokens: 8000,
         system: SYSTEM_PROMPT,
         messages: [
           {
@@ -218,6 +220,12 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
     const data = JSON.parse(responseText);
     const content = data.content[0].text;
 
+    // Check if response was truncated (stop_reason indicates max tokens hit)
+    const stopReason = data.stop_reason || data.content?.[0]?.stop_reason;
+    if (stopReason === 'max_tokens' || stopReason === 'length') {
+      console.warn('Response was truncated due to token limit');
+    }
+
     // Parse the JSON response
     let tailoredData: any;
     try {
@@ -230,10 +238,22 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
       }
 
       const jsonString = content.substring(jsonStart, jsonEnd + 1);
+
+      // Check if the JSON looks truncated (common patterns)
+      if (jsonString.match(/[^}\]"]\s*$/)) {
+        throw new Error('Response was truncated. The AI output was cut off before completing. Please try again.');
+      }
+
       tailoredData = JSON.parse(jsonString);
     } catch (parseError) {
       console.error('JSON Parse Error:', parseError);
       console.error('Raw response:', content);
+
+      // Check if this looks like a truncation issue
+      if (content.length > 10000 && !content.trim().endsWith('}')) {
+        throw new Error('Response was truncated due to length. Please try with a simpler resume or shorter job description.');
+      }
+
       throw new Error('Failed to parse AI response. Please try again.');
     }
 
