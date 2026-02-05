@@ -102,7 +102,7 @@ export function ReviewTab({ resume, onExport, onEdit }: ReviewTabProps) {
       </div>
 
       {/* ATS Score Dashboard */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200 animate-fade-in-up">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">ATS Compatibility Score</h3>
@@ -136,7 +136,11 @@ export function ReviewTab({ resume, onExport, onEdit }: ReviewTabProps) {
             { label: 'Format', value: atsScore.formatCompatibility, icon: '✅', weight: '20%' },
             { label: 'Completeness', value: atsScore.sectionCompleteness, icon: '📋', weight: '15%' },
           ].map((metric, idx) => (
-            <div key={idx} className="bg-white rounded-lg p-4 shadow-sm">
+            <div
+              key={idx}
+              className="bg-white rounded-xl p-4 shadow-sm hover:shadow-lg transition-smooth hover:-translate-y-1 animate-fade-in-up"
+              style={{ animationDelay: `${idx * 0.1}s` }}
+            >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-gray-600 flex items-center gap-1">
                   <span>{metric.icon}</span>
@@ -223,18 +227,18 @@ export function ReviewTab({ resume, onExport, onEdit }: ReviewTabProps) {
         <div className="flex gap-4">
           <button
             onClick={() => onExport('docx')}
-            className="px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition shadow-md hover:shadow-lg flex items-center gap-2"
+            className="group px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-xl hover:from-green-700 hover:to-emerald-700 transition-smooth shadow-lg shadow-green-600/25 hover:shadow-green-600/40 hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 group-hover:translate-y-0.5 transition-smooth" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             Download DOCX
           </button>
           <button
             onClick={() => onExport('pdf')}
-            className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition shadow-md hover:shadow-lg flex items-center gap-2"
+            className="group px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-blue-800 transition-smooth shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40 hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 group-hover:translate-y-0.5 transition-smooth" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
             </svg>
             Download PDF

@@ -53,47 +53,56 @@ export function GenerateTab({
             <button
               key={template.id}
               onClick={() => onTemplateChange(template.id)}
-              className={`p-4 border-2 rounded-lg text-left transition-all ${selectedTemplate === template.id
-                  ? 'border-blue-600 bg-blue-50 shadow-md'
-                  : 'border-gray-200 hover:border-blue-300'
+              className={`group p-5 border-2 rounded-2xl text-left transition-smooth hover:-translate-y-1 ${selectedTemplate === template.id
+                  ? 'border-blue-600 bg-gradient-to-br from-blue-50 to-cyan-50 shadow-lg shadow-blue-100'
+                  : 'border-slate-200 hover:border-blue-300 hover:shadow-lg hover:bg-slate-50'
                 }`}
             >
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="font-semibold text-gray-900">{template.name}</h3>
+              <div className="flex items-start justify-between mb-3">
+                <h3 className={`font-semibold transition-smooth ${selectedTemplate === template.id ? 'text-blue-700' : 'text-slate-900 group-hover:text-blue-600'}`}>
+                  {template.name}
+                </h3>
                 {selectedTemplate === template.id && (
-                  <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
+                  <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center animate-scale-in">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
                 )}
               </div>
-              <p className="text-sm text-gray-600 mb-2">{template.description}</p>
-              <p className="text-xs text-gray-500">{template.preview}</p>
+              <p className="text-sm text-slate-600 mb-2">{template.description}</p>
+              <p className="text-xs text-slate-500">{template.preview}</p>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="flex justify-end pt-6 border-t">
+      <div className="flex justify-end pt-6 border-t border-slate-100">
         <button
           onClick={onGenerate}
           disabled={!jobDescription.trim() || isGenerating}
-          className={`px-8 py-3 rounded-lg font-medium transition-all shadow-md ${isGenerating
-              ? 'bg-gray-400 cursor-not-allowed'
+          className={`group px-8 py-3.5 rounded-xl font-semibold transition-smooth shadow-lg flex items-center gap-2 ${isGenerating
+              ? 'bg-slate-400 cursor-not-allowed shadow-none'
               : jobDescription.trim()
-                ? 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-blue-600/25 hover:shadow-blue-600/40 hover:scale-[1.02] active:scale-[0.98] animate-pulse-glow'
+                : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
             }`}
         >
           {isGenerating ? (
-            <span className="flex items-center gap-2">
+            <>
               <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
               Generating Resume...
-            </span>
+            </>
           ) : (
-            'Generate Tailored Resume'
+            <>
+              <svg className="w-5 h-5 group-hover:rotate-12 transition-smooth" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Generate Tailored Resume
+            </>
           )}
         </button>
       </div>

@@ -30,8 +30,12 @@ const GenerationProgress = dynamic(() => import('@/components/GenerationProgress
 // Loading spinner for tabs
 function TabLoadingSpinner() {
     return (
-        <div className="flex items-center justify-center py-12">
-            <div className="w-8 h-8 border-4 border-blue-200 rounded-full animate-spin border-t-blue-600"></div>
+        <div className="flex flex-col items-center justify-center py-16 animate-fade-in">
+            <div className="relative">
+                <div className="w-12 h-12 border-4 border-blue-100 rounded-full"></div>
+                <div className="absolute inset-0 w-12 h-12 border-4 border-transparent rounded-full animate-spin border-t-blue-600"></div>
+            </div>
+            <p className="mt-4 text-sm text-slate-500 animate-pulse">Loading content...</p>
         </div>
     );
 }
@@ -220,16 +224,16 @@ export default function Dashboard() {
             />
 
             {/* Header */}
-            <header className="sticky top-0 z-50 bg-white border-b border-slate-200">
+            <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100 transition-smooth">
                 <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
+                    <div className="flex items-center gap-4 group cursor-pointer">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-600/20 group-hover:shadow-blue-600/40 transition-smooth group-hover:scale-105">
                             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                         </div>
                         <div>
-                            <h1 className="text-lg font-semibold text-slate-900">Resume Builder</h1>
+                            <h1 className="text-lg font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">Resume Builder</h1>
                             <p className="text-sm text-slate-500">Welcome, {profile?.full_name || user.email}</p>
                         </div>
                     </div>
@@ -295,60 +299,78 @@ export default function Dashboard() {
                     </div>
                 )}
 
-                {/* Navigation Tabs */}
+                {/* Navigation Tabs with Progress Indicators */}
                 <div className="flex justify-center mb-8">
-                    <div className="inline-flex rounded-lg bg-white border border-slate-200 p-1 shadow-sm">
-                        <button
-                            onClick={() => setActiveTab('setup')}
-                            className={`px-6 py-2.5 rounded-md font-medium text-sm transition-all ${activeTab === 'setup'
-                                ? 'bg-blue-600 text-white shadow-sm'
-                                : 'text-slate-600 hover:text-slate-900'
-                                }`}
-                        >
-                            1. Base Resume
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('generate')}
-                            disabled={!baseResume}
-                            className={`px-6 py-2.5 rounded-md font-medium text-sm transition-all ${activeTab === 'generate'
-                                ? 'bg-blue-600 text-white shadow-sm'
-                                : baseResume
-                                    ? 'text-slate-600 hover:text-slate-900'
-                                    : 'text-slate-300 cursor-not-allowed'
-                                }`}
-                        >
-                            2. Generate
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('review')}
-                            disabled={!generatedResume}
-                            className={`px-6 py-2.5 rounded-md font-medium text-sm transition-all ${activeTab === 'review'
-                                ? 'bg-blue-600 text-white shadow-sm'
-                                : generatedResume
-                                    ? 'text-slate-600 hover:text-slate-900'
-                                    : 'text-slate-300 cursor-not-allowed'
-                                }`}
-                        >
-                            3. Review & Export
-                        </button>
+                    <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-0">
+                        {[
+                            { id: 'setup' as const, label: 'Base Resume', number: '1', completed: !!baseResume },
+                            { id: 'generate' as const, label: 'Generate', number: '2', completed: !!generatedResume },
+                            { id: 'review' as const, label: 'Review & Export', number: '3', completed: false }
+                        ].map((tab, index, arr) => (
+                            <div key={tab.id} className="flex items-center">
+                                <button
+                                    onClick={() => setActiveTab(tab.id)}
+                                    disabled={(tab.id === 'generate' && !baseResume) || (tab.id === 'review' && !generatedResume)}
+                                    className={`relative flex items-center gap-3 px-5 py-3 rounded-xl font-medium text-sm transition-smooth ${
+                                        activeTab === tab.id
+                                            ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-600/25'
+                                            : tab.completed
+                                                ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
+                                                : (baseResume || tab.id === 'setup')
+                                                    ? 'bg-white border border-slate-200 text-slate-600 hover:border-blue-300 hover:bg-blue-50'
+                                                    : 'bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-100'
+                                    }`}
+                                >
+                                    <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-smooth ${
+                                        activeTab === tab.id
+                                            ? 'bg-white/20'
+                                            : tab.completed
+                                                ? 'bg-green-500 text-white'
+                                                : 'bg-slate-100 text-slate-500'
+                                    }`}>
+                                        {tab.completed && activeTab !== tab.id ? (
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        ) : tab.number}
+                                    </span>
+                                    <span className="hidden sm:inline">{tab.label}</span>
+                                    <span className="sm:hidden">{tab.number}</span>
+                                </button>
+
+                                {/* Connector line */}
+                                {index < arr.length - 1 && (
+                                    <div className={`hidden sm:block w-8 h-0.5 mx-1 transition-smooth ${
+                                        tab.completed ? 'bg-green-400' : 'bg-slate-200'
+                                    }`} />
+                                )}
+                            </div>
+                        ))}
                     </div>
                 </div>
 
                 {/* Error Display */}
                 {error && (
-                    <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 flex items-center gap-3">
-                        <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span className="flex-1">{error}</span>
-                        <button onClick={() => setError('')} className="text-red-500 hover:text-red-700">
-                            ✕
+                    <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 flex items-center gap-3 animate-slide-up shadow-sm">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                            <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <span className="flex-1 font-medium">{error}</span>
+                        <button
+                            onClick={() => setError('')}
+                            className="p-2 rounded-lg hover:bg-red-100 transition-fast text-red-500"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
                         </button>
                     </div>
                 )}
 
                 {/* Tab Content */}
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 animate-fade-in-up">
                     {activeTab === 'setup' && (
                         <SetupTab
                             baseResume={baseResume}
@@ -380,47 +402,58 @@ export default function Dashboard() {
                 </div>
 
                 {/* Quick Stats */}
-                <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div
+                        className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-2 transition-smooth cursor-default group animate-fade-in-up"
+                        style={{ animationDelay: '0.1s' }}
+                    >
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-100 to-cyan-100 flex items-center justify-center group-hover:scale-110 transition-smooth shadow-sm">
+                                <svg className="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
                             </div>
                             <div>
-                                <p className="text-slate-500 text-sm">Resumes Generated</p>
-                                <p className="text-2xl font-bold text-slate-900">{storage.getGeneratedResumes().length}</p>
+                                <p className="text-slate-500 text-sm font-medium">Resumes Generated</p>
+                                <p className="text-3xl font-bold text-slate-900 group-hover:text-blue-600 transition-smooth">{storage.getGeneratedResumes().length}</p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div
+                        className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-2 transition-smooth cursor-default group animate-fade-in-up"
+                        style={{ animationDelay: '0.2s' }}
+                    >
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
-                                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center group-hover:scale-110 transition-smooth shadow-sm">
+                                <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                             </div>
                             <div>
-                                <p className="text-slate-500 text-sm">Latest ATS Score</p>
-                                <p className="text-2xl font-bold text-slate-900">
+                                <p className="text-slate-500 text-sm font-medium">Latest ATS Score</p>
+                                <p className={`text-3xl font-bold transition-smooth ${generatedResume ? 'text-green-600 group-hover:text-green-700' : 'text-slate-400'}`}>
                                     {generatedResume ? `${generatedResume.atsScore}%` : '-'}
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div
+                        className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-2 transition-smooth cursor-default group animate-fade-in-up sm:col-span-2 lg:col-span-1"
+                        style={{ animationDelay: '0.3s' }}
+                    >
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-lg bg-amber-100 flex items-center justify-center">
-                                <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center group-hover:scale-110 transition-smooth shadow-sm">
+                                <svg className="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                             </div>
                             <div>
-                                <p className="text-slate-500 text-sm">Credits Remaining</p>
-                                <p className="text-2xl font-bold text-slate-900">{isMaster ? '∞' : (profile?.credits || 0)}</p>
+                                <p className="text-slate-500 text-sm font-medium">Credits Remaining</p>
+                                <p className={`text-3xl font-bold transition-smooth ${isMaster ? 'text-amber-600' : 'text-slate-900'} group-hover:text-amber-600`}>
+                                    {isMaster ? '∞' : (profile?.credits || 0)}
+                                </p>
                             </div>
                         </div>
                     </div>
