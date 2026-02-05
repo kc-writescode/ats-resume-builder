@@ -48,16 +48,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         const initAuth = async () => {
+            console.log('[Auth] Initializing authentication...');
             try {
-                const { data: { session } } = await supabase.auth.getSession();
+                const { data: { session }, error } = await supabase.auth.getSession();
+                if (error) {
+                    console.error('[Auth] getSession error:', error.message);
+                } else {
+                    console.log('[Auth] Session status:', session ? 'active' : 'none');
+                }
                 setSession(session);
                 setUser(session?.user ?? null);
                 if (session?.user?.id) {
+                    console.log('[Auth] Fetching profile for user:', session.user.id);
                     await fetchProfile(session.user.id);
                 }
             } catch (err) {
-                console.error('Auth initialization error:', err);
+                console.error('[Auth] Initialization exception:', err);
             } finally {
+                console.log('[Auth] Initialization complete');
                 setLoading(false);
             }
         };
@@ -82,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const signIn = async (email: string, password: string) => {
+        console.log('[Auth] Attempting sign in for:', email);
         try {
             // Add timeout to prevent hanging
             const timeoutPromise = new Promise<never>((_, reject) =>
@@ -93,15 +102,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 password,
             });
 
-            const { error } = await Promise.race([signInPromise, timeoutPromise]);
-            return { error };
+            console.log('[Auth] Waiting for sign in response...');
+            const result = await Promise.race([signInPromise, timeoutPromise]);
+            console.log('[Auth] Sign in response received:', result.error ? 'error' : 'success');
+
+            if (result.error) {
+                console.error('[Auth] Sign in failed:', result.error.message);
+            }
+
+            return { error: result.error };
         } catch (err) {
-            console.error('Sign in error:', err);
-            return { error: err instanceof Error ? err : new Error('Sign in failed') };
+            console.error('[Auth] Sign in exception:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Sign in failed';
+            return { error: new Error(errorMessage) };
         }
     };
 
     const signUp = async (email: string, password: string) => {
+        console.log('[Auth] Attempting sign up for:', email);
         try {
             // Add timeout to prevent hanging
             const timeoutPromise = new Promise<never>((_, reject) =>
@@ -113,11 +131,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 password,
             });
 
-            const { error } = await Promise.race([signUpPromise, timeoutPromise]);
-            return { error };
+            console.log('[Auth] Waiting for sign up response...');
+            const result = await Promise.race([signUpPromise, timeoutPromise]);
+            console.log('[Auth] Sign up response received:', result.error ? 'error' : 'success');
+
+            if (result.error) {
+                console.error('[Auth] Sign up failed:', result.error.message);
+            }
+
+            return { error: result.error };
         } catch (err) {
-            console.error('Sign up error:', err);
-            return { error: err instanceof Error ? err : new Error('Sign up failed') };
+            console.error('[Auth] Sign up exception:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Sign up failed';
+            return { error: new Error(errorMessage) };
         }
     };
 

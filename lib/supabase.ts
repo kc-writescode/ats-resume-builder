@@ -2,19 +2,49 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // Lazy initialization to avoid build-time errors when env vars are not available
 let _supabase: SupabaseClient | null = null;
+let _initError: Error | null = null;
 
 export const getSupabase = (): SupabaseClient => {
+  // Return cached error if initialization already failed
+  if (_initError) {
+    throw _initError;
+  }
+
   if (!_supabase) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error('Supabase environment variables are not configured');
+      _initError = new Error(
+        'Supabase environment variables are not configured. ' +
+        `URL: ${supabaseUrl ? 'set' : 'missing'}, Key: ${supabaseAnonKey ? 'set' : 'missing'}`
+      );
+      console.error('[Supabase] Initialization failed:', _initError.message);
+      throw _initError;
     }
 
-    _supabase = createClient(supabaseUrl, supabaseAnonKey);
+    try {
+      _supabase = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+        },
+      });
+      console.log('[Supabase] Client initialized successfully');
+    } catch (error) {
+      _initError = error instanceof Error ? error : new Error('Unknown Supabase init error');
+      console.error('[Supabase] Client creation failed:', _initError.message);
+      throw _initError;
+    }
   }
   return _supabase;
+};
+
+// Reset the client (useful for testing or reinitializing)
+export const resetSupabaseClient = () => {
+  _supabase = null;
+  _initError = null;
 };
 
 // For backwards compatibility - will throw at runtime if env vars missing
@@ -29,7 +59,11 @@ export const supabase = new Proxy({} as SupabaseClient, {
       }
       return value;
     } catch (error) {
-      console.error('Supabase client error:', error);
+      // Log the error but don't re-throw during property access for 'auth'
+      // This allows better error handling in the consuming code
+      if (prop === 'auth') {
+        console.error('[Supabase] Auth access failed:', error);
+      }
       throw error;
     }
   }
