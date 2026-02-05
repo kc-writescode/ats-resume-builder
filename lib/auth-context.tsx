@@ -82,19 +82,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const signIn = async (email: string, password: string) => {
-        const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        });
-        return { error };
+        try {
+            // Add timeout to prevent hanging
+            const timeoutPromise = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('Sign in timed out. Please try again.')), 15000)
+            );
+
+            const signInPromise = supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
+
+            const { error } = await Promise.race([signInPromise, timeoutPromise]);
+            return { error };
+        } catch (err) {
+            console.error('Sign in error:', err);
+            return { error: err instanceof Error ? err : new Error('Sign in failed') };
+        }
     };
 
     const signUp = async (email: string, password: string) => {
-        const { error } = await supabase.auth.signUp({
-            email,
-            password,
-        });
-        return { error };
+        try {
+            // Add timeout to prevent hanging
+            const timeoutPromise = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('Sign up timed out. Please try again.')), 15000)
+            );
+
+            const signUpPromise = supabase.auth.signUp({
+                email,
+                password,
+            });
+
+            const { error } = await Promise.race([signUpPromise, timeoutPromise]);
+            return { error };
+        } catch (err) {
+            console.error('Sign up error:', err);
+            return { error: err instanceof Error ? err : new Error('Sign up failed') };
+        }
     };
 
     const signOut = async () => {

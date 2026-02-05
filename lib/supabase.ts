@@ -20,7 +20,18 @@ export const getSupabase = (): SupabaseClient => {
 // For backwards compatibility - will throw at runtime if env vars missing
 export const supabase = new Proxy({} as SupabaseClient, {
   get(_, prop) {
-    return getSupabase()[prop as keyof SupabaseClient];
+    try {
+      const client = getSupabase();
+      const value = client[prop as keyof SupabaseClient];
+      // Bind functions to the client to preserve 'this' context
+      if (typeof value === 'function') {
+        return value.bind(client);
+      }
+      return value;
+    } catch (error) {
+      console.error('Supabase client error:', error);
+      throw error;
+    }
   }
 });
 
