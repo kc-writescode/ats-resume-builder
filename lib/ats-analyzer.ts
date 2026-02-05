@@ -646,12 +646,33 @@ export function extractKeywordsFromJobDescription(jobDescription: string): JobDe
   });
 
   // Extract important multi-word phrases (Title Case phrases often indicate key terms)
+  // BUT filter out garbage phrases that aren't actual skills/keywords
   const titleCasePhrases = originalText.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+\b/g) || [];
+
+  // Words that indicate a phrase is NOT a keyword (sentence fragments, company names, etc.)
+  const garbageIndicators = [
+    'what', 'how', 'why', 'when', 'where', 'who', 'which',
+    'you', 'your', 'our', 'their', 'the', 'this', 'that',
+    'will', 'can', 'may', 'should', 'would', 'could',
+    'about', 'company', 'position', 'role', 'job', 'candidate',
+    'expect', 'offer', 'provide', 'looking', 'seeking', 'hiring',
+    'background', 'qualifications', 'requirements', 'responsibilities',
+    'bachelor', 'master', 'degree', 'education', 'university', 'college'
+  ];
+
   titleCasePhrases.forEach(phrase => {
     const normalized = phrase.toLowerCase();
-    if (!extractedKeywords.includes(normalized) && normalized.length > 5 && normalized.split(' ').length <= 4) {
-      extractedKeywords.push(normalized);
-    }
+    const words = normalized.split(' ');
+
+    // Skip if too short, too long, or contains garbage indicators
+    if (normalized.length <= 5 || words.length > 3) return;
+    if (words.some(w => garbageIndicators.includes(w))) return;
+    if (extractedKeywords.includes(normalized)) return;
+
+    // Skip if it looks like a job title (contains specialist, manager, engineer, etc. at end)
+    if (/\b(specialist|manager|director|coordinator|analyst|engineer|lead|officer|associate|consultant|sr|junior|senior)$/i.test(normalized)) return;
+
+    extractedKeywords.push(normalized);
   });
 
   // Extract required skills from requirements sections
@@ -698,13 +719,57 @@ export function extractKeywordsFromJobDescription(jobDescription: string): JobDe
     }
   });
 
-  // Deduplicate and prioritize required skills
-  const uniqueKeywords = [...new Set([...requiredSkills, ...extractedKeywords])];
+  // Final cleanup filter - remove garbage keywords
+  const isValidKeyword = (kw: string): boolean => {
+    const lower = kw.toLowerCase().trim();
+
+    // Too short or too long
+    if (lower.length < 2 || lower.length > 40) return false;
+
+    // Contains garbage indicator words (sentence fragments, not skills)
+    const garbageWords = [
+      'what', 'how', 'why', 'when', 'where', 'who', 'which',
+      'you', 'your', 'our', 'their', 'my', 'we', 'us',
+      'the', 'this', 'that', 'these', 'those',
+      'will', 'can', 'may', 'should', 'would', 'could', 'must',
+      'expect', 'offer', 'provide', 'looking', 'seeking', 'hiring',
+      'company', 'corporation', 'inc', 'llc', 'corp',
+      'background', 'qualifications', 'requirements', 'responsibilities',
+      'bachelor', 'master', 'degree', 'education', 'university', 'college',
+      'paragon', 'biomet', 'zimmer'  // Company-specific terms from JD
+    ];
+    if (garbageWords.some(g => lower.includes(g))) return false;
+
+    // Is a job title pattern (contains specialist, manager, etc.)
+    if (/\b(specialist|manager|director|coordinator|analyst|engineer|lead|officer|associate|consultant|administrator)\b/i.test(lower)) {
+      // But allow if it's a skill area like "project manager" methodology
+      if (!/^(project management|change management|risk management|data management)$/i.test(lower)) {
+        return false;
+      }
+    }
+
+    // Starts with sr/junior/senior (job level indicators)
+    if (/^(sr|jr|junior|senior|mid|entry)\s/i.test(lower)) return false;
+
+    // Is just articles/prepositions at start
+    if (/^(the|a|an|at|in|on|for|to|of|and|or)\s/i.test(lower)) return false;
+
+    // Too many words (likely a sentence fragment)
+    if (lower.split(/\s+/).length > 4) return false;
+
+    return true;
+  };
+
+  // Deduplicate and prioritize required skills, then filter
+  const uniqueKeywords = [...new Set([...requiredSkills, ...extractedKeywords])]
+    .filter(isValidKeyword);
+
+  const cleanedRequiredSkills = requiredSkills.filter(isValidKeyword);
 
   return {
     text: jobDescription,
     extractedKeywords: uniqueKeywords.slice(0, 40),
-    requiredSkills: requiredSkills.slice(0, 25),
+    requiredSkills: cleanedRequiredSkills.slice(0, 25),
     jobTitle,
     companyName
   };

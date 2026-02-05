@@ -105,8 +105,11 @@ export default function HomePage() {
       ).length;
       const requiredMatchRatio = requiredSkillsCount > 0 ? matchedRequired / requiredSkillsCount : 0;
 
-      // Score components aligned with ats-analyzer.ts
-      const keywordScore = (matchRatio * 0.4 + requiredMatchRatio * 0.6) * 60; // Up to 60 points
+      // Score components - matchRatio is primary driver, required skills is bonus
+      // This ensures score reflects visible keywords (if 0 missing, score should be high)
+      const baseKeywordScore = matchRatio * 50; // Up to 50 points for overall keyword match
+      const requiredBonus = requiredMatchRatio * 10; // Up to 10 bonus points for required skills
+      const keywordScore = baseKeywordScore + requiredBonus; // Up to 60 total
       const contentScore = Math.min(20, tryResumeText.length / 150); // Up to 20 points
       const baseBonus = 15; // Base structure bonus for having content
 
