@@ -125,10 +125,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 }
 
+// Default values for SSR/prerendering when context is not available
+const defaultAuthContext: AuthContextType = {
+    user: null,
+    session: null,
+    profile: null,
+    loading: true,
+    isMaster: false,
+    isAdmin: false,
+    signIn: async () => ({ error: new Error('Auth not initialized') }),
+    signUp: async () => ({ error: new Error('Auth not initialized') }),
+    signOut: async () => {},
+    refreshProfile: async () => {},
+};
+
 export function useAuth() {
     const context = useContext(AuthContext);
+    // Return default context during SSR/prerendering to avoid build errors
     if (context === undefined) {
-        throw new Error('useAuth must be used within an AuthProvider');
+        return defaultAuthContext;
     }
     return context;
 }
