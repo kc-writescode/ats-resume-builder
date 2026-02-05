@@ -1,216 +1,817 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { BaseResume, GeneratedResume } from '@/types/resume';
-import { storage } from '@/lib/storage';
-import { generateTailoredResume } from '@/lib/ai-service';
-import { analyzeATSCompatibility, extractKeywordsFromJobDescription, analyzeKeywords } from '@/lib/ats-analyzer';
-import { generateTextBasedPDF } from '@/lib/text-pdf-generator';
-import { generateDOCX } from '@/lib/docx-generator';
-// Note: keyword highlighting is disabled by default - users can manually bold text using Ctrl+B in edit mode
-import { SetupTab } from '@/components/SetupTab';
-import { GenerateTab } from '@/components/GenerateTab';
-import { ReviewTab } from '@/components/ReviewTab';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/components/ui/toast';
 
-export default function Home() {
-  const [baseResume, setBaseResume] = useState<BaseResume | null>(null);
-  const [jobDescriptionText, setJobDescriptionText] = useState('');
-  const [selectedTemplate, setSelectedTemplate] = useState('classic');
-  const [generatedResume, setGeneratedResume] = useState<GeneratedResume | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [activeTab, setActiveTab] = useState<'setup' | 'generate' | 'review'>('setup');
+export default function HomePage() {
+  const { user, profile, loading, signIn, signUp } = useAuth();
+  const router = useRouter();
+  const toast = useToast();
+  const [showAuth, setShowAuth] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
+  // Track if we've already redirected to prevent duplicate toasts
+  const hasRedirected = useRef(false);
+
+  // Animation state
+  const [currentStep, setCurrentStep] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  // Handle hydration
   useEffect(() => {
-    const stored = storage.getBaseResume();
-    if (stored) {
-      setBaseResume(stored);
-      setActiveTab('generate');
-    }
+    setMounted(true);
   }, []);
 
-  const handleSaveBaseResume = (resume: BaseResume) => {
-    storage.setBaseResume(resume);
-    setBaseResume(resume);
-    setActiveTab('generate');
-  };
+  // Redirect based on role when logged in
+  useEffect(() => {
+    if (!loading && user && profile && !hasRedirected.current) {
+      hasRedirected.current = true;
 
-  const handleGenerate = async () => {
-    if (!baseResume || !jobDescriptionText) {
-      setError('Please ensure base resume is set and job description is provided');
+      if (profile.role?.toLowerCase() === 'master') {
+        toast.success('Welcome back, Admin!');
+        router.replace('/master');
+      } else {
+        toast.success('Welcome back!');
+        router.replace('/dashboard');
+      }
+    }
+  }, [user, profile, loading, router, toast]);
+
+  // Smooth animation cycle
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsAnimating(true);
+      setTimeout(() => {
+        setCurrentStep((prev) => (prev + 1) % 3);
+        setTimeout(() => setIsAnimating(false), 100);
+      }, 300);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsSubmitting(true);
+
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address');
+      toast.error('Invalid email address');
+      setIsSubmitting(false);
       return;
     }
 
-    setIsGenerating(true);
-    setError('');
-
-    try {
-      // Extract job details
-      const jobDescription = extractKeywordsFromJobDescription(jobDescriptionText);
-
-      console.log('Generating resume with base skills:', baseResume.skills);
-      console.log('Base resume skill categories:', baseResume.skillCategories);
-
-      // Generate tailored resume using AI
-      const tailoredContent = await generateTailoredResume(
-        baseResume,
-        jobDescription
-      );
-
-      // Analyze keywords and add core competencies
-      const keywordAnalysis = analyzeKeywords(tailoredContent, jobDescription);
-      const contentWithKeywords: BaseResume = {
-        ...tailoredContent,
-        coreCompetencies: keywordAnalysis.suggestedCompetencies
-      };
-
-      // Note: Auto-bolding disabled - users can manually bold text using Ctrl+B in edit mode
-
-      // Analyze ATS score
-      const atsScore = analyzeATSCompatibility(contentWithKeywords, jobDescription);
-
-      // Create generated resume object
-      const generated: GeneratedResume = {
-        id: `resume-${Date.now()}`,
-        jobTitle: jobDescription.jobTitle,
-        companyName: jobDescription.companyName,
-        jobDescription: jobDescriptionText,
-        generatedAt: Date.now(),
-        atsScore: atsScore.overall,
-        content: contentWithKeywords,
-        template: selectedTemplate
-      };
-
-      storage.addGeneratedResume(generated);
-      setGeneratedResume(generated);
-      setActiveTab('review');
-    } catch (err) {
-      console.error('Generation error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to generate resume');
-    } finally {
-      setIsGenerating(false);
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      toast.error('Password too short');
+      setIsSubmitting(false);
+      return;
     }
-  };
-
-  const handleExport = async (format: 'pdf' | 'docx') => {
-    if (!generatedResume) return;
-
-    const fileName = `${generatedResume.content.personal.name.replace(/\s+/g, '_')}_${generatedResume.companyName.replace(/\s+/g, '_')}`;
 
     try {
-      let blob: Blob;
-
-      if (format === 'pdf') {
-        blob = await generateTextBasedPDF(generatedResume.content, generatedResume.template, fileName);
+      if (isSignUp) {
+        const { error } = await signUp(email, password);
+        if (error) {
+          setError(error.message);
+          toast.error(error.message);
+        } else {
+          toast.success('Account created! Check your email to verify.');
+          setShowAuth(false);
+        }
       } else {
-        blob = await generateDOCX(generatedResume.content, generatedResume.template, fileName);
+        const { error } = await signIn(email, password);
+        if (error) {
+          setError(error.message);
+          toast.error('Sign in failed: ' + error.message);
+        } else {
+          // Close modal and set redirect flag
+          setShowAuth(false);
+          hasRedirected.current = true;
+          toast.success('Signed in successfully!');
+          // Immediate redirect - the auth context will update user/profile
+          router.replace('/dashboard');
+        }
       }
-
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${fileName}.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Export error:', err);
-      setError(`Failed to export ${format.toUpperCase()}`);
+    } catch {
+      setError('An unexpected error occurred');
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Header */}
-        <header className="mb-12 text-center">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-3">
-            ATS Resume Builder
-          </h1>
-          <p className="text-gray-600 text-lg">
-            AI-powered resume tailoring for maximum ATS compatibility
-          </p>
-        </header>
 
-        {/* Navigation Tabs */}
-        <div className="flex justify-center mb-8">
-          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 shadow-sm">
-            <button
-              onClick={() => setActiveTab('setup')}
-              className={`px-6 py-2 rounded-md font-medium transition-all ${activeTab === 'setup'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-gray-600 hover:text-gray-900'
-                }`}
-            >
-              1. Base Resume
-            </button>
-            <button
-              onClick={() => setActiveTab('generate')}
-              disabled={!baseResume}
-              className={`px-6 py-2 rounded-md font-medium transition-all ${activeTab === 'generate'
-                ? 'bg-blue-600 text-white shadow-md'
-                : baseResume
-                  ? 'text-gray-600 hover:text-gray-900'
-                  : 'text-gray-300 cursor-not-allowed'
-                }`}
-            >
-              2. Generate
-            </button>
-            <button
-              onClick={() => setActiveTab('review')}
-              disabled={!generatedResume}
-              className={`px-6 py-2 rounded-md font-medium transition-all ${activeTab === 'review'
-                ? 'bg-blue-600 text-white shadow-md'
-                : generatedResume
-                  ? 'text-gray-600 hover:text-gray-900'
-                  : 'text-gray-300 cursor-not-allowed'
-                }`}
-            >
-              3. Review & Export
-            </button>
-          </div>
-        </div>
+  const openAuthModal = useCallback((signUp: boolean) => {
+    setIsSignUp(signUp);
+    setShowAuth(true);
+    setError('');
+    setEmail('');
+    setPassword('');
+  }, []);
 
-        {/* Error Display */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-            {error}
-          </div>
-        )}
+  const features = [
+    {
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+      ),
+      title: 'ATS Optimized',
+      description: 'Automatically format and keyword-optimize your resume to pass any Applicant Tracking System.'
+    },
+    {
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      ),
+      title: 'AI-Powered',
+      description: 'Our intelligent AI tailors your resume content to match specific job requirements instantly.'
+    },
+    {
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+      title: 'Save Time',
+      description: 'Generate a perfectly tailored resume in under 2 minutes instead of hours of manual editing.'
+    },
+    {
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+        </svg>
+      ),
+      title: 'Export Ready',
+      description: 'Download your polished resume as a professional PDF or DOCX file, ready to submit.'
+    }
+  ];
 
-        {/* Tab Content */}
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          {activeTab === 'setup' && (
-            <SetupTab
-              baseResume={baseResume}
-              onSave={handleSaveBaseResume}
-            />
-          )}
+  const steps = [
+    { number: '01', title: 'Upload Resume', desc: 'Start with your existing resume or build from scratch' },
+    { number: '02', title: 'Add Job Details', desc: 'Paste the job description you want to apply for' },
+    { number: '03', title: 'Get Tailored Resume', desc: 'Download your ATS-optimized resume instantly' }
+  ];
 
-          {activeTab === 'generate' && (
-            <GenerateTab
-              jobDescription={jobDescriptionText}
-              onJobDescriptionChange={setJobDescriptionText}
-              selectedTemplate={selectedTemplate}
-              onTemplateChange={setSelectedTemplate}
-              onGenerate={handleGenerate}
-              isGenerating={isGenerating}
-            />
-          )}
+  const plans = [
+    {
+      name: 'Starter',
+      price: 'Free',
+      period: '',
+      description: 'Perfect for trying out the service',
+      features: ['3 resume generations', 'Basic ATS optimization', 'PDF export', 'Email support'],
+      cta: 'Get Started Free',
+      highlighted: false
+    },
+    {
+      name: 'Professional',
+      price: '$19',
+      period: '/month',
+      description: 'Best for active job seekers',
+      features: ['50 resume generations', 'Advanced ATS optimization', 'PDF & DOCX export', 'Cover letter generation', 'Priority support', 'Resume analytics'],
+      cta: 'Start Professional',
+      highlighted: true
+    },
+    {
+      name: 'Enterprise',
+      price: '$49',
+      period: '/month',
+      description: 'For recruiters & career coaches',
+      features: ['Unlimited generations', 'All Professional features', 'Team collaboration', 'API access', 'Custom branding', 'Dedicated support'],
+      cta: 'Contact Sales',
+      highlighted: false
+    }
+  ];
 
-          {activeTab === 'review' && generatedResume && (
-            <ReviewTab
-              resume={generatedResume}
-              onExport={handleExport}
-              onEdit={(updated) => {
-                setGeneratedResume(updated);
-                storage.updateGeneratedResume(updated.id, updated);
-              }}
-            />
-          )}
+  const testimonials = [
+    { name: 'Sarah M.', role: 'Software Engineer', company: 'Google', image: '👩‍💻', quote: 'ResumeAI helped me land interviews at 5 FAANG companies. The ATS optimization is incredible!' },
+    { name: 'James K.', role: 'Product Manager', company: 'Amazon', image: '👨‍💼', quote: 'I went from 2% response rate to 35% after using ResumeAI. Absolute game changer.' },
+    { name: 'Priya R.', role: 'Data Scientist', company: 'Meta', image: '👩‍🔬', quote: 'The AI understands exactly what recruiters are looking for. Got my dream job in 3 weeks!' }
+  ];
+
+  const trustBadges = [
+    { icon: '🔒', label: 'SSL Encrypted' },
+    { icon: '🛡️', label: 'SOC2 Compliant' },
+    { icon: '🌍', label: 'GDPR Ready' },
+    { icon: '✅', label: 'Verified Reviews' }
+  ];
+
+  const companyLogos = ['Microsoft', 'Google', 'Amazon', 'Meta', 'Apple', 'Netflix'];
+
+  // Prevent hydration mismatch
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+        <div className="animate-pulse flex items-center justify-center min-h-screen">
+          <div className="w-12 h-12 rounded-full bg-blue-100"></div>
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100 transition-smooth">
+        <div className="max-w-6xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 group cursor-pointer">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-600/20 group-hover:shadow-blue-600/40 transition-smooth group-hover:scale-105">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">ResumeAI</span>
+            </div>
+
+            <div className="hidden md:flex items-center gap-6">
+              <a href="#features" className="text-slate-600 hover:text-blue-600 text-sm font-medium transition-smooth">Features</a>
+              <a href="#pricing" className="text-slate-600 hover:text-blue-600 text-sm font-medium transition-smooth">Pricing</a>
+              <a href="#testimonials" className="text-slate-600 hover:text-blue-600 text-sm font-medium transition-smooth">Reviews</a>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => openAuthModal(false)}
+                className="text-slate-600 hover:text-slate-900 text-sm font-medium transition-smooth hover:scale-105"
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => openAuthModal(true)}
+                className="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-medium hover:from-blue-700 hover:to-blue-800 transition-smooth shadow-lg shadow-blue-600/20 hover:shadow-blue-600/40 hover:scale-105 active:scale-95"
+              >
+                Get Started
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="pt-32 pb-20 px-6 overflow-hidden">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            {/* Left: Content */}
+            <div className="animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100 mb-6 hover:bg-blue-100 transition-smooth cursor-default">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                <span className="text-sm text-blue-700 font-medium">AI-Powered Resume Builder</span>
+              </div>
+
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-slate-900 leading-tight mb-6">
+                Land More Interviews with
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500"> ATS-Ready</span> Resumes
+              </h1>
+
+              <p className="text-lg text-slate-600 mb-8 leading-relaxed max-w-lg">
+                Tailor your resume to any job description in seconds. Our AI ensures your qualifications stand out and pass automated screening systems.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={() => openAuthModal(true)}
+                  className="group px-6 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold hover:from-blue-700 hover:to-blue-800 transition-smooth shadow-xl shadow-blue-600/25 hover:shadow-blue-600/40 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+                >
+                  Create Your Resume Free
+                  <svg className="w-4 h-4 group-hover:translate-x-1 transition-smooth" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="px-6 py-3.5 rounded-xl border-2 border-slate-200 text-slate-700 font-semibold hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 transition-smooth flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  See How It Works
+                </button>
+              </div>
+
+              {/* Trust indicators */}
+              <div className="mt-10 pt-8 border-t border-slate-100 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+                <div className="flex items-center gap-8 flex-wrap">
+                  <div className="group cursor-default">
+                    <p className="text-3xl font-bold text-slate-900 group-hover:text-blue-600 transition-smooth">98%</p>
+                    <p className="text-sm text-slate-500">ATS Pass Rate</p>
+                  </div>
+                  <div className="w-px h-10 bg-slate-200 hidden sm:block"></div>
+                  <div className="group cursor-default">
+                    <p className="text-3xl font-bold text-slate-900 group-hover:text-blue-600 transition-smooth">50K+</p>
+                    <p className="text-sm text-slate-500">Resumes Created</p>
+                  </div>
+                  <div className="w-px h-10 bg-slate-200 hidden sm:block"></div>
+                  <div className="group cursor-default">
+                    <p className="text-3xl font-bold text-slate-900 group-hover:text-blue-600 transition-smooth">4.9★</p>
+                    <p className="text-sm text-slate-500">User Rating</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Resume Animation */}
+            <div className="relative animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+              {/* Decorative background */}
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-100/50 to-cyan-50/50 rounded-3xl -rotate-3 scale-105 animate-float"></div>
+              <div className="absolute inset-0 bg-gradient-to-tr from-purple-100/30 to-blue-50/30 rounded-3xl rotate-2 scale-102"></div>
+
+              {/* Resume Preview Card */}
+              <div className={`relative bg-white rounded-2xl shadow-2xl shadow-slate-200/50 p-8 border border-slate-100 transition-smooth ${isAnimating ? 'scale-[0.98] opacity-90' : 'scale-100'}`}>
+                {/* Animation indicator */}
+                <div className="absolute -top-4 -right-4 px-4 py-2 rounded-full bg-gradient-to-r from-green-100 to-emerald-100 border border-green-200 flex items-center gap-2 shadow-lg animate-float">
+                  <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></span>
+                  <span className="text-sm font-semibold text-green-700">ATS Score: 95%</span>
+                </div>
+
+                {/* Resume mockup with smooth transitions */}
+                <div className="space-y-6">
+                  {/* Header */}
+                  <div className={`text-center pb-4 border-b border-slate-100 transition-smooth ${currentStep === 0 ? 'opacity-100' : 'opacity-70'}`}>
+                    <div className={`h-7 bg-gradient-to-r from-slate-800 to-slate-700 rounded-lg w-48 mx-auto mb-3 transition-smooth ${currentStep === 0 ? 'animate-shimmer scale-105' : ''}`}></div>
+                    <div className="h-3 bg-slate-300 rounded w-64 mx-auto mb-2"></div>
+                    <div className="h-3 bg-slate-200 rounded w-56 mx-auto"></div>
+                  </div>
+
+                  {/* Summary */}
+                  <div className={`transition-smooth duration-500 ${currentStep === 1 ? 'ring-2 ring-blue-300 ring-offset-4 rounded-xl p-3 -m-1 bg-gradient-to-r from-blue-50 to-cyan-50 scale-[1.02]' : ''}`}>
+                    <div className="h-4 bg-slate-700 rounded w-24 mb-3"></div>
+                    <div className="space-y-2">
+                      <div className={`h-2.5 bg-slate-200 rounded w-full transition-smooth ${currentStep === 1 ? 'bg-blue-200' : ''}`}></div>
+                      <div className={`h-2.5 bg-slate-200 rounded w-11/12 transition-smooth ${currentStep === 1 ? 'bg-blue-200' : ''}`}></div>
+                      <div className={`h-2.5 bg-slate-200 rounded w-10/12 transition-smooth ${currentStep === 1 ? 'bg-blue-200' : ''}`}></div>
+                    </div>
+                  </div>
+
+                  {/* Experience */}
+                  <div className={`transition-smooth duration-500 ${currentStep === 2 ? 'ring-2 ring-blue-300 ring-offset-4 rounded-xl p-3 -m-1 bg-gradient-to-r from-blue-50 to-cyan-50 scale-[1.02]' : ''}`}>
+                    <div className="h-4 bg-slate-700 rounded w-28 mb-3"></div>
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex justify-between items-center mb-2">
+                          <div className="h-3.5 bg-slate-500 rounded w-32"></div>
+                          <div className="h-2.5 bg-slate-300 rounded w-20"></div>
+                        </div>
+                        <div className="h-2.5 bg-slate-200 rounded w-full mb-1"></div>
+                        <div className="h-2.5 bg-slate-200 rounded w-10/12"></div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between items-center mb-2">
+                          <div className="h-3.5 bg-slate-500 rounded w-36"></div>
+                          <div className="h-2.5 bg-slate-300 rounded w-20"></div>
+                        </div>
+                        <div className="h-2.5 bg-slate-200 rounded w-full mb-1"></div>
+                        <div className="h-2.5 bg-slate-200 rounded w-9/12"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Skills */}
+                  <div>
+                    <div className="h-4 bg-slate-700 rounded w-16 mb-3"></div>
+                    <div className="flex flex-wrap gap-2">
+                      {['Python', 'React', 'AWS', 'SQL', 'API'].map((skill, i) => (
+                        <span
+                          key={i}
+                          className={`px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 text-xs font-semibold border border-blue-200 transition-smooth hover:scale-110 hover:shadow-md cursor-default ${currentStep === 0 ? 'animate-pulse' : ''}`}
+                          style={{ animationDelay: `${i * 150}ms` }}
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step indicator */}
+                <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-3">
+                  {[0, 1, 2].map((step) => (
+                    <button
+                      key={step}
+                      onClick={() => setCurrentStep(step)}
+                      className={`h-2 rounded-full transition-all duration-500 cursor-pointer hover:opacity-80 ${currentStep === step
+                        ? 'w-10 bg-gradient-to-r from-blue-600 to-cyan-500 shadow-lg shadow-blue-600/30'
+                        : 'w-2 bg-slate-300 hover:bg-slate-400'
+                        }`}
+                      aria-label={`Step ${step + 1}`}
+                    ></button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Trusted By Section */}
+      <section className="py-12 px-6 bg-slate-50/50 border-y border-slate-100">
+        <div className="max-w-6xl mx-auto">
+          <p className="text-center text-sm text-slate-500 mb-6">Trusted by professionals at leading companies</p>
+          <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12">
+            {companyLogos.map((company, i) => (
+              <span
+                key={i}
+                className="text-slate-400 font-semibold text-lg tracking-wide hover:text-slate-600 transition-smooth cursor-default hover:scale-110"
+                style={{ animationDelay: `${i * 100}ms` }}
+              >
+                {company}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section id="features" className="py-24 px-6 bg-white">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+              Why Choose <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">ResumeAI</span>?
+            </h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              Everything you need to create professional, ATS-optimized resumes that get you noticed.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {features.map((feature, i) => (
+              <div
+                key={i}
+                className="group p-6 rounded-2xl bg-slate-50 border border-slate-100 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-100 transition-smooth hover:-translate-y-2 cursor-default"
+                style={{ animationDelay: `${i * 100}ms` }}
+              >
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-100 to-cyan-100 text-blue-600 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-blue-200 transition-smooth">
+                  {feature.icon}
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900 mb-2 group-hover:text-blue-600 transition-smooth">{feature.title}</h3>
+                <p className="text-slate-600 text-sm leading-relaxed">{feature.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section id="how-it-works" className="py-24 px-6 bg-gradient-to-b from-slate-50 to-white">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+              Simple 3-Step Process
+            </h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              Get your tailored, ATS-optimized resume in just a few minutes.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {steps.map((step, i) => (
+              <div key={i} className="relative group">
+                {i < 2 && (
+                  <div className="hidden md:block absolute top-10 left-full w-full h-0.5 bg-gradient-to-r from-blue-300 via-blue-200 to-transparent -translate-x-8 group-hover:from-blue-400 transition-smooth"></div>
+                )}
+                <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-200 transition-smooth hover:-translate-y-2 cursor-default">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 text-white flex items-center justify-center text-xl font-bold mb-6 shadow-lg shadow-blue-600/25 group-hover:shadow-blue-600/40 group-hover:scale-110 transition-smooth">
+                    {step.number}
+                  </div>
+                  <h3 className="text-xl font-semibold text-slate-900 mb-3 group-hover:text-blue-600 transition-smooth">{step.title}</h3>
+                  <p className="text-slate-600">{step.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section id="pricing" className="py-24 px-6 bg-white">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+              Simple, Transparent Pricing
+            </h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              Choose the plan that fits your job search needs. No hidden fees.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 items-start">
+            {plans.map((plan, i) => (
+              <div
+                key={i}
+                className={`relative rounded-2xl p-8 border transition-smooth hover:-translate-y-2 ${plan.highlighted
+                  ? 'bg-gradient-to-br from-blue-600 to-blue-700 border-blue-600 text-white shadow-2xl shadow-blue-600/30 scale-105 z-10'
+                  : 'bg-white border-slate-200 hover:border-blue-200 hover:shadow-xl'
+                  }`}
+              >
+                {plan.highlighted && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-400 text-amber-900 text-xs font-bold shadow-lg animate-float">
+                    MOST POPULAR
+                  </div>
+                )}
+                <h3 className={`text-xl font-bold mb-2 ${plan.highlighted ? 'text-white' : 'text-slate-900'}`}>
+                  {plan.name}
+                </h3>
+                <div className="flex items-baseline gap-1 mb-2">
+                  <span className={`text-4xl font-bold ${plan.highlighted ? 'text-white' : 'text-slate-900'}`}>
+                    {plan.price}
+                  </span>
+                  <span className={plan.highlighted ? 'text-blue-100' : 'text-slate-500'}>
+                    {plan.period}
+                  </span>
+                </div>
+                <p className={`text-sm mb-6 ${plan.highlighted ? 'text-blue-100' : 'text-slate-500'}`}>
+                  {plan.description}
+                </p>
+                <ul className="space-y-3 mb-8">
+                  {plan.features.map((feature, j) => (
+                    <li key={j} className="flex items-center gap-3">
+                      <svg className={`w-5 h-5 flex-shrink-0 ${plan.highlighted ? 'text-blue-200' : 'text-green-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className={`text-sm ${plan.highlighted ? 'text-blue-50' : 'text-slate-600'}`}>
+                        {feature}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={() => openAuthModal(true)}
+                  className={`w-full py-3 rounded-xl font-semibold transition-smooth hover:scale-[1.02] active:scale-[0.98] ${plan.highlighted
+                    ? 'bg-white text-blue-600 hover:bg-blue-50 shadow-lg'
+                    : 'bg-slate-900 text-white hover:bg-slate-800'
+                    }`}
+                >
+                  {plan.cta}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Money Back Guarantee */}
+          <div className="mt-12 text-center">
+            <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 hover:shadow-lg hover:scale-105 transition-smooth cursor-default">
+              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              <span className="text-green-700 font-semibold text-sm">30-Day Money Back Guarantee</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section id="testimonials" className="py-24 px-6 bg-gradient-to-b from-slate-50 to-white">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+              Loved by Job Seekers
+            </h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              See what professionals are saying about ResumeAI
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {testimonials.map((testimonial, i) => (
+              <div
+                key={i}
+                className="group bg-white rounded-2xl p-8 border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-200 transition-smooth hover:-translate-y-2 cursor-default"
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-100 to-cyan-100 flex items-center justify-center text-2xl group-hover:scale-110 transition-smooth">
+                    {testimonial.image}
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-900">{testimonial.name}</h4>
+                    <p className="text-sm text-slate-500">{testimonial.role} at {testimonial.company}</p>
+                  </div>
+                </div>
+                <div className="flex gap-1 mb-4">
+                  {[...Array(5)].map((_, j) => (
+                    <svg key={j} className="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+                <p className="text-slate-600 italic leading-relaxed">&quot;{testimonial.quote}&quot;</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Trust Badges */}
+      <section className="py-12 px-6 bg-white border-t border-slate-100">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-wrap justify-center items-center gap-6">
+            {trustBadges.map((badge, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-blue-200 hover:shadow-lg hover:scale-105 transition-smooth cursor-default"
+              >
+                <span className="text-xl">{badge.icon}</span>
+                <span className="text-sm font-medium text-slate-700">{badge.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-24 px-6 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 relative overflow-hidden">
+        {/* Background decoration */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-white rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-cyan-300 rounded-full blur-3xl"></div>
+        </div>
+
+        <div className="max-w-4xl mx-auto text-center relative z-10">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            Ready to Land More Interviews?
+          </h2>
+          <p className="text-blue-100 text-lg mb-8 max-w-xl mx-auto">
+            Join 50,000+ job seekers who have improved their resume game and landed their dream jobs.
+          </p>
+          <button
+            onClick={() => openAuthModal(true)}
+            className="group px-8 py-4 rounded-xl bg-white text-blue-600 font-semibold hover:bg-blue-50 transition-smooth shadow-2xl shadow-black/20 inline-flex items-center gap-2 hover:scale-105 active:scale-95"
+          >
+            Get Started Free
+            <svg className="w-5 h-5 group-hover:translate-x-1 transition-smooth" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </button>
+          <p className="mt-4 text-blue-200 text-sm">No credit card required</p>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-slate-900 text-slate-400 py-16 px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-8 mb-8">
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-lg">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <span className="font-bold text-white text-lg">ResumeAI</span>
+              </div>
+              <p className="text-sm leading-relaxed">AI-powered resume builder that helps you land more interviews.</p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-white mb-4">Product</h4>
+              <ul className="space-y-2 text-sm">
+                <li><a href="#features" className="hover:text-white transition-smooth">Features</a></li>
+                <li><a href="#pricing" className="hover:text-white transition-smooth">Pricing</a></li>
+                <li><a href="#testimonials" className="hover:text-white transition-smooth">Reviews</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-white mb-4">Company</h4>
+              <ul className="space-y-2 text-sm">
+                <li><a href="#" className="hover:text-white transition-smooth">About Us</a></li>
+                <li><a href="#" className="hover:text-white transition-smooth">Careers</a></li>
+                <li><a href="#" className="hover:text-white transition-smooth">Contact</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-white mb-4">Legal</h4>
+              <ul className="space-y-2 text-sm">
+                <li><a href="#" className="hover:text-white transition-smooth">Privacy Policy</a></li>
+                <li><a href="#" className="hover:text-white transition-smooth">Terms of Service</a></li>
+                <li><a href="#" className="hover:text-white transition-smooth">Cookie Policy</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="pt-8 border-t border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-sm">© {new Date().getFullYear()} ResumeAI. All rights reserved.</p>
+            <div className="flex items-center gap-4">
+              <a href="#" className="hover:text-white transition-smooth hover:scale-110" aria-label="Twitter">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" /></svg>
+              </a>
+              <a href="#" className="hover:text-white transition-smooth hover:scale-110" aria-label="LinkedIn">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
+              </a>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+      {/* Auth Modal with smooth animations */}
+      {showAuth && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-fade-in"
+            onClick={() => setShowAuth(false)}
+          ></div>
+          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 animate-modal-scale-in">
+
+            <button
+              onClick={() => setShowAuth(false)}
+              className="absolute top-4 right-4 p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-smooth hover:rotate-90"
+              aria-label="Close"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 mb-4 shadow-xl shadow-blue-600/25">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900 mb-1">
+                {isSignUp ? 'Create Account' : 'Welcome Back'}
+              </h2>
+              <p className="text-slate-500 text-sm">
+                {isSignUp ? 'Start building your perfect resume' : 'Sign in to continue'}
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-0 focus:border-blue-500 transition-smooth hover:border-slate-300"
+                  placeholder="you@example.com"
+                  required
+                  autoComplete="email"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-0 focus:border-blue-500 transition-smooth hover:border-slate-300"
+                  placeholder="••••••••"
+                  required
+                  minLength={6}
+                  autoComplete={isSignUp ? 'new-password' : 'current-password'}
+                />
+              </div>
+
+              {error && (
+                <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm flex items-center gap-2" role="alert">
+                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-smooth disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-blue-600/25"
+              >
+                {isSubmitting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Processing...
+                  </span>
+                ) : (
+                  isSignUp ? 'Create Account' : 'Sign In'
+                )}
+              </button>
+            </form>
+
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setError('');
+                }}
+                className="text-slate-600 hover:text-blue-600 text-sm transition-smooth"
+              >
+                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
