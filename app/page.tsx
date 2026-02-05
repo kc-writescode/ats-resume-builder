@@ -25,6 +25,7 @@ export default function HomePage() {
   const [uploadError, setUploadError] = useState('');
   const [parsedContactInfo, setParsedContactInfo] = useState<{ name: string | null; email: string | null; phone: string | null } | null>(null);
   const [showCreditsPrompt, setShowCreditsPrompt] = useState(false);
+  const [previewAtsScore, setPreviewAtsScore] = useState<{ score: number; matchedKeywords: string[]; missingKeywords: string[] } | null>(null);
 
   // Track if we've already redirected to prevent duplicate toasts
   const hasRedirected = useRef(false);
@@ -67,6 +68,73 @@ export default function HomePage() {
     }, 4000);
     return () => clearInterval(interval);
   }, []);
+
+  // Calculate ATS score preview when both resume and JD are available
+  useEffect(() => {
+    if (tryResumeText && tryJobDescription.trim().length > 50) {
+      // Extract keywords from job description
+      const jdLower = tryJobDescription.toLowerCase();
+      const resumeLower = tryResumeText.toLowerCase();
+
+      // Common tech and business keywords to look for
+      const keywordPatterns = [
+        // Technical skills
+        /\b(javascript|typescript|python|java|react|node|angular|vue|sql|aws|azure|docker|kubernetes|git|api|rest|graphql|html|css|sass|mongodb|postgresql|redis|linux|agile|scrum|ci\/cd|devops)\b/gi,
+        // Soft skills
+        /\b(leadership|communication|teamwork|problem.solving|analytical|management|collaboration|strategic|innovative)\b/gi,
+        // Business terms
+        /\b(stakeholder|revenue|growth|optimization|implementation|development|analysis|reporting|project|budget)\b/gi
+      ];
+
+      const allJdKeywords: string[] = [];
+      keywordPatterns.forEach(pattern => {
+        const matches = jdLower.match(pattern) || [];
+        matches.forEach(m => {
+          const normalized = m.toLowerCase().replace(/[^a-z]/g, '');
+          if (!allJdKeywords.includes(normalized)) {
+            allJdKeywords.push(normalized);
+          }
+        });
+      });
+
+      // Also extract any capitalized multi-word terms from JD (likely important)
+      const capitalizedTerms = tryJobDescription.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+\b/g) || [];
+      capitalizedTerms.forEach(term => {
+        const normalized = term.toLowerCase();
+        if (!allJdKeywords.includes(normalized) && normalized.length > 3) {
+          allJdKeywords.push(normalized);
+        }
+      });
+
+      const matched: string[] = [];
+      const missing: string[] = [];
+
+      allJdKeywords.slice(0, 20).forEach(keyword => {
+        if (resumeLower.includes(keyword)) {
+          matched.push(keyword);
+        } else {
+          missing.push(keyword);
+        }
+      });
+
+      // Calculate score based on keyword match percentage
+      const totalKeywords = matched.length + missing.length;
+      const matchPercentage = totalKeywords > 0 ? (matched.length / totalKeywords) * 100 : 0;
+
+      // Add some baseline points for having content
+      const baseScore = Math.min(30, tryResumeText.length / 100);
+      const keywordScore = matchPercentage * 0.7;
+      const finalScore = Math.min(100, Math.round(baseScore + keywordScore));
+
+      setPreviewAtsScore({
+        score: finalScore,
+        matchedKeywords: matched.slice(0, 8),
+        missingKeywords: missing.slice(0, 5)
+      });
+    } else {
+      setPreviewAtsScore(null);
+    }
+  }, [tryResumeText, tryJobDescription]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -794,6 +862,98 @@ export default function HomePage() {
             </div>
           </div>
 
+          {/* Step 3: ATS Score Analysis */}
+          {previewAtsScore && (
+            <div className="mt-6 bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 animate-fade-in">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold">Step 3: Your Current ATS Score</h3>
+                  <p className="text-blue-200 text-sm">How well your resume matches this job</p>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-6">
+                {/* Score Circle */}
+                <div className="flex flex-col items-center justify-center">
+                  <div className="relative w-32 h-32">
+                    <svg className="w-32 h-32 -rotate-90">
+                      <circle cx="64" cy="64" r="56" stroke="rgba(255,255,255,0.2)" strokeWidth="8" fill="none" />
+                      <circle
+                        cx="64" cy="64" r="56"
+                        stroke={previewAtsScore.score >= 70 ? '#4ade80' : previewAtsScore.score >= 50 ? '#fbbf24' : '#f87171'}
+                        strokeWidth="8"
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeDasharray={`${previewAtsScore.score * 3.52} 352`}
+                        className="transition-all duration-1000"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className={`text-3xl font-bold ${previewAtsScore.score >= 70 ? 'text-green-400' : previewAtsScore.score >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
+                        {previewAtsScore.score}%
+                      </span>
+                      <span className="text-white/60 text-xs">ATS Match</span>
+                    </div>
+                  </div>
+                  <p className={`mt-2 text-sm font-medium ${previewAtsScore.score >= 70 ? 'text-green-400' : previewAtsScore.score >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
+                    {previewAtsScore.score >= 70 ? 'Good Match!' : previewAtsScore.score >= 50 ? 'Needs Improvement' : 'Low Match'}
+                  </p>
+                </div>
+
+                {/* Matched Keywords */}
+                <div>
+                  <h4 className="text-green-400 font-medium mb-2 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Keywords Found ({previewAtsScore.matchedKeywords.length})
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {previewAtsScore.matchedKeywords.map((kw, i) => (
+                      <span key={i} className="px-2 py-1 rounded-lg bg-green-500/20 text-green-300 text-xs font-medium">
+                        {kw}
+                      </span>
+                    ))}
+                    {previewAtsScore.matchedKeywords.length === 0 && (
+                      <span className="text-white/50 text-sm">No matching keywords found</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Missing Keywords */}
+                <div>
+                  <h4 className="text-amber-400 font-medium mb-2 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    Missing Keywords ({previewAtsScore.missingKeywords.length})
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {previewAtsScore.missingKeywords.map((kw, i) => (
+                      <span key={i} className="px-2 py-1 rounded-lg bg-amber-500/20 text-amber-300 text-xs font-medium">
+                        {kw}
+                      </span>
+                    ))}
+                    {previewAtsScore.missingKeywords.length === 0 && (
+                      <span className="text-white/50 text-sm">Great! All key terms found</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 p-3 rounded-lg bg-blue-500/20 border border-blue-400/30">
+                <p className="text-blue-100 text-sm text-center">
+                  <span className="font-semibold">Sign up to tailor your resume</span> - Our AI will optimize your content to increase your ATS score and highlight relevant experience.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Generate Button */}
           <div className="mt-8 text-center">
             <button
@@ -808,13 +968,16 @@ export default function HomePage() {
               <svg className="w-6 h-6 group-hover:rotate-12 transition-smooth" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-              Generate My Tailored Resume
+              {previewAtsScore ? 'Sign Up to Tailor My Resume' : 'Generate My Tailored Resume'}
               <svg className="w-5 h-5 group-hover:translate-x-1 transition-smooth" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
             </button>
             <p className="mt-4 text-blue-200 text-sm">
-              Free to try - Sign up to save and download your tailored resume
+              {previewAtsScore
+                ? `Current score: ${previewAtsScore.score}% → Our AI can help improve this!`
+                : 'Free to try - Sign up to save and download your tailored resume'
+              }
             </p>
           </div>
         </div>
