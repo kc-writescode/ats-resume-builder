@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/components/ui/toast';
+import { extractKeywordsFromJobDescription } from '@/lib/ats-analyzer';
 
 export default function HomePage() {
   const { user, profile, loading, signIn, signUp } = useAuth();
@@ -70,66 +71,51 @@ export default function HomePage() {
   }, []);
 
   // Calculate ATS score preview when both resume and JD are available
+  // Uses the SAME extraction logic as dashboard for consistency across all industries
   useEffect(() => {
     if (tryResumeText && tryJobDescription.trim().length > 50) {
-      // Extract keywords from job description
-      const jdLower = tryJobDescription.toLowerCase();
       const resumeLower = tryResumeText.toLowerCase();
 
-      // Common tech and business keywords to look for
-      const keywordPatterns = [
-        // Technical skills
-        /\b(javascript|typescript|python|java|react|node|angular|vue|sql|aws|azure|docker|kubernetes|git|api|rest|graphql|html|css|sass|mongodb|postgresql|redis|linux|agile|scrum|ci\/cd|devops)\b/gi,
-        // Soft skills
-        /\b(leadership|communication|teamwork|problem.solving|analytical|management|collaboration|strategic|innovative)\b/gi,
-        // Business terms
-        /\b(stakeholder|revenue|growth|optimization|implementation|development|analysis|reporting|project|budget)\b/gi
-      ];
-
-      const allJdKeywords: string[] = [];
-      keywordPatterns.forEach(pattern => {
-        const matches = jdLower.match(pattern) || [];
-        matches.forEach(m => {
-          const normalized = m.toLowerCase().replace(/[^a-z]/g, '');
-          if (!allJdKeywords.includes(normalized)) {
-            allJdKeywords.push(normalized);
-          }
-        });
-      });
-
-      // Also extract any capitalized multi-word terms from JD (likely important)
-      const capitalizedTerms = tryJobDescription.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+\b/g) || [];
-      capitalizedTerms.forEach(term => {
-        const normalized = term.toLowerCase();
-        if (!allJdKeywords.includes(normalized) && normalized.length > 3) {
-          allJdKeywords.push(normalized);
-        }
-      });
+      // Use the same extraction function as dashboard and AI service
+      // This supports ALL industries: tech, pharma, finance, legal, marketing, HR, operations
+      const jobDesc = extractKeywordsFromJobDescription(tryJobDescription);
+      const allKeywords = [...new Set([...jobDesc.requiredSkills, ...jobDesc.extractedKeywords])];
 
       const matched: string[] = [];
       const missing: string[] = [];
 
-      allJdKeywords.slice(0, 20).forEach(keyword => {
-        if (resumeLower.includes(keyword)) {
+      // Check top 25 keywords (prioritize required skills first)
+      allKeywords.slice(0, 25).forEach(keyword => {
+        const keywordLower = keyword.toLowerCase();
+        if (resumeLower.includes(keywordLower)) {
           matched.push(keyword);
         } else {
           missing.push(keyword);
         }
       });
 
-      // Calculate score based on keyword match percentage
+      // Calculate score using same weighting as GenerateTab and ReviewTab
       const totalKeywords = matched.length + missing.length;
-      const matchPercentage = totalKeywords > 0 ? (matched.length / totalKeywords) * 100 : 0;
+      const matchRatio = totalKeywords > 0 ? matched.length / totalKeywords : 0;
 
-      // Add some baseline points for having content
-      const baseScore = Math.min(30, tryResumeText.length / 100);
-      const keywordScore = matchPercentage * 0.7;
-      const finalScore = Math.min(100, Math.round(baseScore + keywordScore));
+      // Weight required skills higher
+      const requiredSkillsCount = Math.min(jobDesc.requiredSkills.length, 15);
+      const matchedRequired = matched.filter(m =>
+        jobDesc.requiredSkills.slice(0, 15).map(s => s.toLowerCase()).includes(m.toLowerCase())
+      ).length;
+      const requiredMatchRatio = requiredSkillsCount > 0 ? matchedRequired / requiredSkillsCount : 0;
+
+      // Score components aligned with ats-analyzer.ts
+      const keywordScore = (matchRatio * 0.4 + requiredMatchRatio * 0.6) * 60; // Up to 60 points
+      const contentScore = Math.min(20, tryResumeText.length / 150); // Up to 20 points
+      const baseBonus = 15; // Base structure bonus for having content
+
+      const finalScore = Math.min(100, Math.round(keywordScore + contentScore + baseBonus));
 
       setPreviewAtsScore({
         score: finalScore,
         matchedKeywords: matched.slice(0, 8),
-        missingKeywords: missing.slice(0, 5)
+        missingKeywords: missing.slice(0, 6)
       });
     } else {
       setPreviewAtsScore(null);

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { GeneratedResume, BaseResume } from '@/types/resume';
-import { analyzeATSCompatibility, extractKeywordsFromJobDescription } from '@/lib/ats-analyzer';
+import { analyzeATSCompatibility, extractKeywordsFromJobDescription, analyzeKeywords } from '@/lib/ats-analyzer';
 import { getTemplateComponent } from './templates';
 import { BoldToolbar } from './BoldToolbar';
 import { KeywordInsights } from './KeywordInsights';
@@ -16,9 +16,15 @@ interface ReviewTabProps {
 export function ReviewTab({ resume, onExport, onEdit }: ReviewTabProps) {
   const [editMode, setEditMode] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [showKeywordsDropdown, setShowKeywordsDropdown] = useState(false);
 
   const jobDescription = extractKeywordsFromJobDescription(resume.jobDescription);
   const atsScore = analyzeATSCompatibility(resume.content, jobDescription);
+
+  // Analyze which JD keywords are in the resume
+  const keywordAnalysis = useMemo(() => {
+    return analyzeKeywords(resume.content, jobDescription);
+  }, [resume.content, jobDescription]);
 
   // Get the template component
   const TemplateComponent = getTemplateComponent(resume.template);
@@ -187,6 +193,101 @@ export function ReviewTab({ resume, onExport, onEdit }: ReviewTabProps) {
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+      </div>
+
+      {/* JD Keywords Analysis Dropdown */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <button
+          onClick={() => setShowKeywordsDropdown(!showKeywordsDropdown)}
+          className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-slate-200 hover:from-emerald-100 hover:to-teal-100 transition-smooth"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+              </svg>
+            </div>
+            <div className="text-left">
+              <h3 className="font-semibold text-slate-900">JD Keywords Analysis</h3>
+              <p className="text-sm text-slate-600">
+                <span className="text-green-600 font-medium">{keywordAnalysis.matchedKeywords.length} matched</span>
+                {' / '}
+                <span className="text-amber-600 font-medium">{keywordAnalysis.missingKeywords.length} missing</span>
+                {' from '}
+                {keywordAnalysis.allKeywords.length} JD keywords
+              </p>
+            </div>
+          </div>
+          <svg
+            className={`w-5 h-5 text-slate-500 transition-transform duration-300 ${showKeywordsDropdown ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {showKeywordsDropdown && (
+          <div className="p-6 animate-fade-in-up">
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Matched Keywords */}
+              <div>
+                <h4 className="font-semibold text-green-700 mb-3 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Keywords Found in Resume ({keywordAnalysis.matchedKeywords.length})
+                </h4>
+                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-3 bg-green-50 rounded-xl border border-green-100">
+                  {keywordAnalysis.matchedKeywords.length > 0 ? (
+                    keywordAnalysis.matchedKeywords.map((kw, i) => (
+                      <span
+                        key={i}
+                        className="px-2.5 py-1 rounded-lg bg-green-100 text-green-700 text-xs font-medium border border-green-200 hover:bg-green-200 transition-smooth cursor-default"
+                      >
+                        {kw}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-sm text-slate-500">No keywords matched</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Missing Keywords */}
+              <div>
+                <h4 className="font-semibold text-amber-700 mb-3 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  Missing Keywords ({keywordAnalysis.missingKeywords.length})
+                </h4>
+                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-3 bg-amber-50 rounded-xl border border-amber-100">
+                  {keywordAnalysis.missingKeywords.length > 0 ? (
+                    keywordAnalysis.missingKeywords.map((kw, i) => (
+                      <span
+                        key={i}
+                        className="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-700 text-xs font-medium border border-amber-200 hover:bg-amber-200 transition-smooth cursor-default"
+                      >
+                        {kw}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-sm text-green-600 font-medium">All JD keywords found!</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Tip */}
+            <div className="mt-4 p-3 rounded-lg bg-blue-50 border border-blue-100">
+              <p className="text-sm text-blue-700">
+                <span className="font-semibold">Tip:</span> If important keywords are missing, you can enable editing mode above to manually add them to your resume for a higher ATS score.
+              </p>
+            </div>
           </div>
         )}
       </div>
