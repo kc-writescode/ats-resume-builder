@@ -1,20 +1,40 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { BaseResume, GeneratedResume } from '@/types/resume';
 import { storage } from '@/lib/storage';
-import { generateTailoredResumeStreaming } from '@/lib/ai-service';
 import { StreamProgress } from '@/lib/stream-helpers';
 import { analyzeATSCompatibility, extractKeywordsFromJobDescription, analyzeKeywords } from '@/lib/ats-analyzer';
-import { generateTextBasedPDF } from '@/lib/text-pdf-generator';
-import { generateDOCX } from '@/lib/docx-generator';
 import { deductCreditAsync, validateCredits } from '@/lib/credit-service';
-import { SetupTab } from '@/components/SetupTab';
-import { GenerateTab } from '@/components/GenerateTab';
-import { ReviewTab } from '@/components/ReviewTab';
-import { GenerationProgress } from '@/components/GenerationProgress';
+
+// Dynamic imports for code splitting - these are loaded only when needed
+const SetupTab = dynamic(() => import('@/components/SetupTab').then(mod => ({ default: mod.SetupTab })), {
+    loading: () => <TabLoadingSpinner />
+});
+
+const GenerateTab = dynamic(() => import('@/components/GenerateTab').then(mod => ({ default: mod.GenerateTab })), {
+    loading: () => <TabLoadingSpinner />
+});
+
+const ReviewTab = dynamic(() => import('@/components/ReviewTab').then(mod => ({ default: mod.ReviewTab })), {
+    loading: () => <TabLoadingSpinner />
+});
+
+const GenerationProgress = dynamic(() => import('@/components/GenerationProgress').then(mod => ({ default: mod.GenerationProgress })), {
+    ssr: false
+});
+
+// Loading spinner for tabs
+function TabLoadingSpinner() {
+    return (
+        <div className="flex items-center justify-center py-12">
+            <div className="w-8 h-8 border-4 border-blue-200 rounded-full animate-spin border-t-blue-600"></div>
+        </div>
+    );
+}
 
 export default function Dashboard() {
     const { user, profile, loading, signOut, isMaster, refreshProfile } = useAuth();
@@ -78,6 +98,9 @@ export default function Dashboard() {
 
             console.log('Generating resume with base skills:', baseResume.skills);
             console.log('Base resume skill categories:', baseResume.skillCategories);
+
+            // Dynamically import AI service for code splitting
+            const { generateTailoredResumeStreaming } = await import('@/lib/ai-service');
 
             // Use streaming version with progress callback
             const tailoredContent = await generateTailoredResumeStreaming(
@@ -148,9 +171,12 @@ export default function Dashboard() {
         try {
             let blob: Blob;
 
+            // Dynamically import heavy export libraries only when needed
             if (format === 'pdf') {
+                const { generateTextBasedPDF } = await import('@/lib/text-pdf-generator');
                 blob = await generateTextBasedPDF(generatedResume.content, generatedResume.template, fileName);
             } else {
+                const { generateDOCX } = await import('@/lib/docx-generator');
                 blob = await generateDOCX(generatedResume.content, generatedResume.template, fileName);
             }
 
