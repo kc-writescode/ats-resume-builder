@@ -430,6 +430,7 @@ export default function Dashboard() {
                             onTemplateChange={setSelectedTemplate}
                             onGenerate={handleGenerate}
                             isGenerating={isGenerating}
+                            baseResume={baseResume}
                         />
                     )}
 

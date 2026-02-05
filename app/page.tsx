@@ -761,10 +761,10 @@ export default function HomePage() {
               <span className="text-white/90 text-sm font-medium">Try Before You Sign Up</span>
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Experience the Power of AI Resume Building
+              Check Your ATS Score for Free
             </h2>
             <p className="text-blue-100 text-lg max-w-2xl mx-auto">
-              Upload your resume and paste a job description to see how we tailor your resume for maximum impact.
+              Upload your resume and paste a job description to instantly see your ATS compatibility score and missing keywords.
             </p>
           </div>
 
@@ -845,19 +845,24 @@ export default function HomePage() {
                 </div>
                 <div>
                   <h3 className="text-white font-semibold">Step 2: Paste Job Description</h3>
-                  <p className="text-blue-200 text-sm">Copy from the job posting</p>
+                  <p className="text-blue-200 text-sm">Your ATS score appears instantly below</p>
                 </div>
               </div>
 
               <textarea
                 value={tryJobDescription}
                 onChange={(e) => setTryJobDescription(e.target.value)}
-                placeholder="Paste the complete job description here..."
+                placeholder="Paste the complete job description here to see your ATS score..."
                 rows={8}
                 className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-blue-200/50 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-transparent resize-none transition-smooth"
               />
               <p className="mt-2 text-blue-200 text-sm">
-                {tryJobDescription.length > 0 ? `${tryJobDescription.length} characters` : 'Include requirements, responsibilities, and qualifications'}
+                {tryJobDescription.length > 0
+                  ? tryJobDescription.length < 50
+                    ? `${tryJobDescription.length} characters - add more to see ATS score`
+                    : `${tryJobDescription.length} characters`
+                  : 'Paste job description to check your ATS score for free'
+                }
               </p>
             </div>
           </div>
