@@ -16,9 +16,21 @@ export default function HomePage() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // Try-it-free section state
+  const [tryResumeText, setTryResumeText] = useState('');
+  const [tryJobDescription, setTryJobDescription] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [parsedContactInfo, setParsedContactInfo] = useState<{ name: string | null; email: string | null; phone: string | null } | null>(null);
+  const [showCreditsPrompt, setShowCreditsPrompt] = useState(false);
 
   // Track if we've already redirected to prevent duplicate toasts
   const hasRedirected = useRef(false);
+
+  // WhatsApp contact link for plan purchases
+  const whatsappLink = 'https://api.whatsapp.com/send/?phone=917993723103&text=Hi+ResumeAI+,+I%E2%80%99d+like+to+take+a+plan+&type=phone_number&app_absent=0';
 
   // Animation state
   const [currentStep, setCurrentStep] = useState(0);
@@ -84,8 +96,12 @@ export default function HomePage() {
           setError(error.message);
           toast.error(error.message);
         } else {
+          // Setup new user - saves cold lead and gives 1 free credit
+          await setupNewUser(email);
           toast.success('Account created! Check your email to verify.');
           setShowAuth(false);
+          // Show credits prompt after signup
+          setShowCreditsPrompt(true);
         }
       } else {
         const { error } = await signIn(email, password);
@@ -93,12 +109,15 @@ export default function HomePage() {
           setError(error.message);
           toast.error('Sign in failed: ' + error.message);
         } else {
-          // Close modal and set redirect flag
+          // Close modal and show loading animation
           setShowAuth(false);
+          setIsLoggingIn(true);
           hasRedirected.current = true;
           toast.success('Signed in successfully!');
-          // Immediate redirect - the auth context will update user/profile
-          router.replace('/dashboard');
+          // Small delay to show loading animation before redirect
+          setTimeout(() => {
+            router.replace('/dashboard');
+          }, 1500);
         }
       }
     } catch {
@@ -117,6 +136,162 @@ export default function HomePage() {
     setEmail('');
     setPassword('');
   }, []);
+
+  // Extract contact info from resume text
+  const extractContactInfo = (resumeText: string) => {
+    const result: { name: string | null; email: string | null; phone: string | null } = {
+      name: null,
+      email: null,
+      phone: null
+    };
+
+    // Extract email
+    const emailMatch = resumeText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+    if (emailMatch) {
+      result.email = emailMatch[0].toLowerCase();
+    }
+
+    // Extract phone (various formats)
+    const phonePatterns = [
+      /\+?1?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/,
+      /\+91[-.\s]?\d{10}/,
+      /\d{10}/,
+      /\+\d{1,3}[-.\s]?\d{6,14}/
+    ];
+    for (const pattern of phonePatterns) {
+      const phoneMatch = resumeText.match(pattern);
+      if (phoneMatch) {
+        result.phone = phoneMatch[0].replace(/[^\d+]/g, '');
+        break;
+      }
+    }
+
+    // Extract name (usually the first line)
+    const lines = resumeText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    if (lines.length > 0) {
+      const firstLine = lines[0];
+      const isLikelyName = firstLine.length < 50 &&
+        !firstLine.includes('@') &&
+        !firstLine.match(/^\d/) &&
+        !firstLine.toLowerCase().includes('resume') &&
+        !firstLine.toLowerCase().includes('curriculum');
+      if (isLikelyName) {
+        result.name = firstLine;
+      }
+    }
+
+    return result;
+  };
+
+  // Handle resume file upload for try-it-free
+  const handleTryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadError('');
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('/api/parse-resume', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to parse resume');
+      }
+
+      setTryResumeText(data.text);
+      const contactInfo = extractContactInfo(data.text);
+      setParsedContactInfo(contactInfo);
+
+      // Pre-fill email if found
+      if (contactInfo.email) {
+        setEmail(contactInfo.email);
+      }
+
+      toast.success('Resume uploaded successfully!');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to upload resume';
+      setUploadError(message);
+      toast.error(message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Handle try generate button click
+  const handleTryGenerate = async () => {
+    if (!tryResumeText.trim()) {
+      toast.error('Please upload your resume first');
+      return;
+    }
+    if (!tryJobDescription.trim()) {
+      toast.error('Please paste a job description');
+      return;
+    }
+
+    // Save to localStorage for dashboard to use
+    localStorage.setItem('pendingResume', JSON.stringify({
+      resumeText: tryResumeText,
+      jobDescription: tryJobDescription,
+      contactInfo: parsedContactInfo,
+    }));
+
+    // If user is already logged in, redirect to dashboard
+    if (user) {
+      toast.success('Redirecting to generate your resume...');
+      router.push('/dashboard');
+      return;
+    }
+
+    // Open signup modal for new users
+    setIsSignUp(true);
+    setShowAuth(true);
+    setError('');
+    if (parsedContactInfo?.email) {
+      setEmail(parsedContactInfo.email);
+    }
+    toast.info('Create an account to generate your tailored resume!');
+  };
+
+  // Setup new user after signup - saves cold lead and gives 1 free credit
+  const setupNewUser = async (userEmail: string) => {
+    try {
+      const pendingData = localStorage.getItem('pendingResume');
+      const { resumeText, jobDescription, contactInfo } = pendingData
+        ? JSON.parse(pendingData)
+        : { resumeText: null, jobDescription: null, contactInfo: null };
+
+      const response = await fetch('/api/new-user-setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userEmail,
+          name: contactInfo?.name || null,
+          phone: contactInfo?.phone || null,
+          resume_text: resumeText,
+          job_description: jobDescription,
+          parsed_data: contactInfo,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.creditAdded) {
+        toast.success('You received 1 free credit to try our resume builder!');
+      }
+
+      // Clear pending data
+      localStorage.removeItem('pendingResume');
+    } catch (err) {
+      console.error('Failed to setup new user:', err);
+    }
+  };
 
   const features = [
     {
@@ -166,29 +341,42 @@ export default function HomePage() {
   const plans = [
     {
       name: 'Starter',
-      price: 'Free',
+      price: '$10',
       period: '',
+      resumes: '10',
       description: 'Perfect for trying out the service',
-      features: ['3 resume generations', 'Basic ATS optimization', 'PDF export', 'Email support'],
-      cta: 'Get Started Free',
+      features: ['10 resume generations', 'ATS optimization', 'PDF & DOCX export', 'Email support'],
+      cta: 'Get Started',
       highlighted: false
     },
     {
-      name: 'Professional',
-      price: '$19',
-      period: '/month',
+      name: 'Growth',
+      price: '$20',
+      period: '',
+      resumes: '100',
       description: 'Best for active job seekers',
-      features: ['50 resume generations', 'Advanced ATS optimization', 'PDF & DOCX export', 'Cover letter generation', 'Priority support', 'Resume analytics'],
-      cta: 'Start Professional',
+      features: ['100 resume generations', 'Advanced ATS optimization', 'PDF & DOCX export', 'Priority support', 'Resume analytics'],
+      cta: 'Choose Growth',
       highlighted: true
     },
     {
+      name: 'Pro',
+      price: '$50',
+      period: '',
+      resumes: '350',
+      description: 'For serious job hunters',
+      features: ['350 resume generations', 'All Growth features', 'Cover letter generation', 'Keyword insights', 'Premium templates'],
+      cta: 'Go Pro',
+      highlighted: false
+    },
+    {
       name: 'Enterprise',
-      price: '$49',
-      period: '/month',
+      price: '$100',
+      period: '',
+      resumes: '750',
       description: 'For recruiters & career coaches',
-      features: ['Unlimited generations', 'All Professional features', 'Team collaboration', 'API access', 'Custom branding', 'Dedicated support'],
-      cta: 'Contact Sales',
+      features: ['750 resume generations', 'All Pro features', 'Team collaboration', 'Dedicated support', 'Custom branding'],
+      cta: 'Contact Us',
       highlighted: false
     }
   ];
@@ -490,6 +678,148 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Try It Free Section */}
+      <section id="try-it-free" className="py-24 px-6 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 relative overflow-hidden">
+        {/* Background decoration */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-white rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-cyan-300 rounded-full blur-3xl"></div>
+        </div>
+
+        <div className="max-w-5xl mx-auto relative z-10">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 mb-6">
+              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+              <span className="text-white/90 text-sm font-medium">Try Before You Sign Up</span>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              Experience the Power of AI Resume Building
+            </h2>
+            <p className="text-blue-100 text-lg max-w-2xl mx-auto">
+              Upload your resume and paste a job description to see how we tailor your resume for maximum impact.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Resume Upload */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold">Step 1: Upload Resume</h3>
+                  <p className="text-blue-200 text-sm">PDF or DOCX format</p>
+                </div>
+              </div>
+
+              <div className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-smooth ${
+                tryResumeText
+                  ? 'border-green-400/50 bg-green-500/10'
+                  : 'border-white/30 hover:border-white/50 hover:bg-white/5'
+              }`}>
+                <input
+                  type="file"
+                  accept=".pdf,.docx"
+                  onChange={handleTryUpload}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  disabled={isUploading}
+                />
+                {isUploading ? (
+                  <div className="flex flex-col items-center">
+                    <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin mb-3"></div>
+                    <p className="text-white font-medium">Parsing your resume...</p>
+                  </div>
+                ) : tryResumeText ? (
+                  <div className="flex flex-col items-center">
+                    <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mb-3">
+                      <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <p className="text-white font-medium">Resume uploaded!</p>
+                    {parsedContactInfo?.name && (
+                      <p className="text-green-300 text-sm mt-1">Welcome, {parsedContactInfo.name}</p>
+                    )}
+                    <button
+                      onClick={() => { setTryResumeText(''); setParsedContactInfo(null); }}
+                      className="mt-2 text-blue-200 text-sm hover:text-white transition-smooth"
+                    >
+                      Upload different resume
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center">
+                    <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center mb-3">
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                    </div>
+                    <p className="text-white font-medium">Drop your resume here</p>
+                    <p className="text-blue-200 text-sm mt-1">or click to browse</p>
+                  </div>
+                )}
+              </div>
+              {uploadError && (
+                <p className="mt-3 text-red-300 text-sm">{uploadError}</p>
+              )}
+            </div>
+
+            {/* Job Description */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold">Step 2: Paste Job Description</h3>
+                  <p className="text-blue-200 text-sm">Copy from the job posting</p>
+                </div>
+              </div>
+
+              <textarea
+                value={tryJobDescription}
+                onChange={(e) => setTryJobDescription(e.target.value)}
+                placeholder="Paste the complete job description here..."
+                rows={8}
+                className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-blue-200/50 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-transparent resize-none transition-smooth"
+              />
+              <p className="mt-2 text-blue-200 text-sm">
+                {tryJobDescription.length > 0 ? `${tryJobDescription.length} characters` : 'Include requirements, responsibilities, and qualifications'}
+              </p>
+            </div>
+          </div>
+
+          {/* Generate Button */}
+          <div className="mt-8 text-center">
+            <button
+              onClick={handleTryGenerate}
+              disabled={!tryResumeText || !tryJobDescription.trim()}
+              className={`group px-10 py-4 rounded-xl font-semibold text-lg transition-smooth inline-flex items-center gap-3 ${
+                tryResumeText && tryJobDescription.trim()
+                  ? 'bg-white text-blue-600 hover:bg-blue-50 shadow-2xl shadow-black/20 hover:scale-105 active:scale-95'
+                  : 'bg-white/20 text-white/50 cursor-not-allowed'
+              }`}
+            >
+              <svg className="w-6 h-6 group-hover:rotate-12 transition-smooth" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Generate My Tailored Resume
+              <svg className="w-5 h-5 group-hover:translate-x-1 transition-smooth" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </button>
+            <p className="mt-4 text-blue-200 text-sm">
+              Free to try - Sign up to save and download your tailored resume
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Pricing Section */}
       <section id="pricing" className="py-24 px-6 bg-white">
         <div className="max-w-6xl mx-auto">
@@ -502,38 +832,38 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 items-start">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
             {plans.map((plan, i) => (
               <div
                 key={i}
-                className={`relative rounded-2xl p-8 border transition-smooth hover:-translate-y-2 ${plan.highlighted
+                className={`relative rounded-2xl p-6 border transition-smooth hover:-translate-y-2 ${plan.highlighted
                   ? 'bg-gradient-to-br from-blue-600 to-blue-700 border-blue-600 text-white shadow-2xl shadow-blue-600/30 scale-105 z-10'
                   : 'bg-white border-slate-200 hover:border-blue-200 hover:shadow-xl'
                   }`}
               >
                 {plan.highlighted && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-400 text-amber-900 text-xs font-bold shadow-lg animate-float">
-                    MOST POPULAR
+                    BEST VALUE
                   </div>
                 )}
                 <h3 className={`text-xl font-bold mb-2 ${plan.highlighted ? 'text-white' : 'text-slate-900'}`}>
                   {plan.name}
                 </h3>
-                <div className="flex items-baseline gap-1 mb-2">
+                <div className="flex items-baseline gap-1 mb-1">
                   <span className={`text-4xl font-bold ${plan.highlighted ? 'text-white' : 'text-slate-900'}`}>
                     {plan.price}
                   </span>
-                  <span className={plan.highlighted ? 'text-blue-100' : 'text-slate-500'}>
-                    {plan.period}
-                  </span>
                 </div>
-                <p className={`text-sm mb-6 ${plan.highlighted ? 'text-blue-100' : 'text-slate-500'}`}>
+                <div className={`text-sm font-semibold mb-4 ${plan.highlighted ? 'text-blue-200' : 'text-blue-600'}`}>
+                  {plan.resumes} Resumes
+                </div>
+                <p className={`text-sm mb-5 ${plan.highlighted ? 'text-blue-100' : 'text-slate-500'}`}>
                   {plan.description}
                 </p>
-                <ul className="space-y-3 mb-8">
+                <ul className="space-y-2.5 mb-6">
                   {plan.features.map((feature, j) => (
-                    <li key={j} className="flex items-center gap-3">
-                      <svg className={`w-5 h-5 flex-shrink-0 ${plan.highlighted ? 'text-blue-200' : 'text-green-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <li key={j} className="flex items-center gap-2">
+                      <svg className={`w-4 h-4 flex-shrink-0 ${plan.highlighted ? 'text-blue-200' : 'text-green-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                       <span className={`text-sm ${plan.highlighted ? 'text-blue-50' : 'text-slate-600'}`}>
@@ -542,15 +872,17 @@ export default function HomePage() {
                     </li>
                   ))}
                 </ul>
-                <button
-                  onClick={() => openAuthModal(true)}
-                  className={`w-full py-3 rounded-xl font-semibold transition-smooth hover:scale-[1.02] active:scale-[0.98] ${plan.highlighted
+                <a
+                  href={whatsappLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`block w-full py-3 rounded-xl font-semibold text-center transition-smooth hover:scale-[1.02] active:scale-[0.98] ${plan.highlighted
                     ? 'bg-white text-blue-600 hover:bg-blue-50 shadow-lg'
                     : 'bg-slate-900 text-white hover:bg-slate-800'
                     }`}
                 >
                   {plan.cta}
-                </button>
+                </a>
               </div>
             ))}
           </div>
@@ -707,6 +1039,49 @@ export default function HomePage() {
         </div>
       </footer>
 
+      {/* Login Loading Overlay */}
+      {isLoggingIn && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 animate-fade-in">
+          <div className="text-center">
+            {/* Animated Logo */}
+            <div className="relative mb-8">
+              <div className="w-20 h-20 mx-auto rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-2xl animate-bounce-in">
+                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              {/* Pulse rings */}
+              <div className="absolute inset-0 w-20 h-20 mx-auto rounded-2xl bg-white/10 animate-ping"></div>
+            </div>
+
+            {/* Loading spinner */}
+            <div className="relative w-12 h-12 mx-auto mb-6">
+              <div className="absolute inset-0 border-4 border-white/20 rounded-full"></div>
+              <div className="absolute inset-0 border-4 border-transparent border-t-white rounded-full animate-spin"></div>
+            </div>
+
+            {/* Text */}
+            <h2 className="text-2xl font-bold text-white mb-2 animate-fade-in-up">
+              Signing you in...
+            </h2>
+            <p className="text-blue-200 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+              Preparing your dashboard
+            </p>
+
+            {/* Loading dots */}
+            <div className="flex justify-center gap-1.5 mt-6">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="w-2 h-2 rounded-full bg-white/60 animate-bounce"
+                  style={{ animationDelay: `${i * 0.15}s` }}
+                ></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Auth Modal with smooth animations */}
       {showAuth && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -809,6 +1184,109 @@ export default function HomePage() {
                 {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Credits Purchase Prompt Modal */}
+      {showCreditsPrompt && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-fade-in"
+            onClick={() => setShowCreditsPrompt(false)}
+          ></div>
+          <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl p-8 animate-modal-scale-in">
+            <button
+              onClick={() => setShowCreditsPrompt(false)}
+              className="absolute top-4 right-4 p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-smooth"
+              aria-label="Close"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 mb-4 shadow-xl shadow-green-600/25 animate-bounce-in">
+                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">
+                Welcome! You Got 1 Free Credit
+              </h2>
+              <p className="text-slate-600">
+                Check your email to verify your account. Use your free credit now or purchase more for additional resumes.
+              </p>
+            </div>
+
+            {/* Quick Plan Options */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 mb-6 border border-blue-200">
+              <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Choose Your Plan
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { name: 'Starter', price: '$10', resumes: '10' },
+                  { name: 'Growth', price: '$20', resumes: '100', popular: true },
+                  { name: 'Pro', price: '$50', resumes: '350' },
+                  { name: 'Enterprise', price: '$100', resumes: '750' },
+                ].map((plan, i) => (
+                  <div
+                    key={i}
+                    className={`p-3 rounded-lg border text-center ${
+                      plan.popular
+                        ? 'bg-blue-600 border-blue-600 text-white'
+                        : 'bg-white border-slate-200 text-slate-900'
+                    }`}
+                  >
+                    <p className="font-bold">{plan.price}</p>
+                    <p className={`text-xs ${plan.popular ? 'text-blue-100' : 'text-slate-500'}`}>
+                      {plan.resumes} resumes
+                    </p>
+                    {plan.popular && (
+                      <span className="inline-block mt-1 px-2 py-0.5 bg-amber-400 text-amber-900 text-[10px] font-bold rounded-full">
+                        BEST VALUE
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <a
+                href={whatsappLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold hover:from-green-600 hover:to-emerald-700 transition-smooth shadow-lg shadow-green-600/25 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                </svg>
+                Purchase Credits via WhatsApp
+              </a>
+              <button
+                onClick={() => {
+                  setShowCreditsPrompt(false);
+                  toast.success('Use your 1 free credit to generate a resume!');
+                  router.push('/dashboard');
+                }}
+                className="w-full py-3 rounded-xl border-2 border-slate-200 text-slate-600 font-medium hover:bg-slate-50 transition-smooth flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+                Use My Free Credit
+              </button>
+            </div>
+
+            <p className="mt-4 text-center text-xs text-slate-500">
+              You have 1 free credit to try our resume builder
+            </p>
           </div>
         </div>
       )}

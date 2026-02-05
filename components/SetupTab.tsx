@@ -1,17 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { BaseResume, PersonalInfo, ExperienceItem, EducationItem, ProjectItem } from '@/types/resume';
 import { parseResumeFromText } from '@/lib/ai-service';
 
 interface SetupTabProps {
   baseResume: BaseResume | null;
   onSave: (resume: BaseResume) => void;
+  initialResumeText?: string;
 }
 
-export function SetupTab({ baseResume, onSave }: SetupTabProps) {
+export function SetupTab({ baseResume, onSave, initialResumeText }: SetupTabProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const hasProcessedInitialText = useRef(false);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -88,6 +90,33 @@ export function SetupTab({ baseResume, onSave }: SetupTabProps) {
   );
   const [skillInput, setSkillInput] = useState('');
   const [certInput, setCertInput] = useState('');
+
+  // Auto-parse initial resume text from try-it-free flow
+  useEffect(() => {
+    if (initialResumeText && !hasProcessedInitialText.current && !baseResume) {
+      hasProcessedInitialText.current = true;
+      const parseInitialResume = async () => {
+        setIsUploading(true);
+        setUploadError('');
+        try {
+          const parsedResume = await parseResumeFromText(initialResumeText);
+          setPersonal(parsedResume.personal);
+          setSummary(parsedResume.summary);
+          setExperience(parsedResume.experience);
+          setEducation(parsedResume.education);
+          setProjects(parsedResume.projects || []);
+          setSkills(parsedResume.skills);
+          setCertifications(parsedResume.certifications);
+        } catch (error) {
+          console.error('Auto-parse Error:', error);
+          setUploadError('Failed to auto-parse resume. Please upload again or enter data manually.');
+        } finally {
+          setIsUploading(false);
+        }
+      };
+      parseInitialResume();
+    }
+  }, [initialResumeText, baseResume]);
 
   const handleAddExperience = () => {
     setExperience([

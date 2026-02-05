@@ -49,6 +49,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         const initAuth = async () => {
             console.log('[Auth] Initializing authentication...');
+
+            // Safety timeout - don't let auth loading hang forever
+            const loadingTimeout = setTimeout(() => {
+                console.warn('[Auth] Loading timeout reached, forcing completion');
+                setLoading(false);
+            }, 5000);
+
             try {
                 const { data: { session }, error } = await supabase.auth.getSession();
                 if (error) {
@@ -58,14 +65,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
                 setSession(session);
                 setUser(session?.user ?? null);
+
+                // Set loading to false immediately after getting session
+                // Profile fetch happens in background
+                setLoading(false);
+                clearTimeout(loadingTimeout);
+
                 if (session?.user?.id) {
                     console.log('[Auth] Fetching profile for user:', session.user.id);
-                    await fetchProfile(session.user.id);
+                    // Fetch profile in background, don't block
+                    fetchProfile(session.user.id).catch(err => {
+                        console.error('[Auth] Background profile fetch failed:', err);
+                    });
                 }
             } catch (err) {
                 console.error('[Auth] Initialization exception:', err);
-            } finally {
-                console.log('[Auth] Initialization complete');
+                clearTimeout(loadingTimeout);
                 setLoading(false);
             }
         };
@@ -74,15 +89,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            async (event: AuthChangeEvent, session: Session | null) => {
+            (event: AuthChangeEvent, session: Session | null) => {
+                console.log('[Auth] Auth state changed:', event);
                 setSession(session);
                 setUser(session?.user ?? null);
+                setLoading(false);
+
                 if (session?.user?.id) {
-                    await fetchProfile(session.user.id);
+                    // Fetch profile in background, don't block UI
+                    fetchProfile(session.user.id).catch(err => {
+                        console.error('[Auth] Profile fetch on auth change failed:', err);
+                    });
                 } else {
                     setProfile(null);
                 }
-                setLoading(false);
             }
         );
 
