@@ -2,6 +2,7 @@
 
 import { BaseResume, JobDescription } from '@/types/resume';
 import { normalizeAcronyms } from './text-utils';
+import { consumeAnthropicStream, estimateProgress, StreamProgress } from './stream-helpers';
 
 
 const SYSTEM_PROMPT = `You are an expert resume writer and ATS (Applicant Tracking System) optimization specialist. Your PRIMARY goal is to maximize the ATS score by strategically integrating keywords while maintaining authentic, impactful content.
@@ -404,6 +405,312 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
       certifications: tailoredData.certifications || baseResume.certifications,
       keywordInsights: tailoredData.keywordInsights || []
     };
+
+    return validateAndCleanResume(tailoredResume);
+  } catch (error) {
+    console.error('AI Service Error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Streaming version of generateTailoredResume.
+ * Shows progress as tokens are generated.
+ * Uses the same prompts and logic as the original function.
+ */
+export async function generateTailoredResumeStreaming(
+  baseResume: BaseResume,
+  jobDescription: JobDescription,
+  onProgress?: (progress: StreamProgress) => void
+): Promise<BaseResume> {
+  const isAIMLRole = /ml|ai|machine learning|artificial intelligence|generative ai|llm|data science/i.test(jobDescription.jobTitle + ' ' + jobDescription.text);
+
+  const skillCategories = isAIMLRole
+    ? "'Programming Languages', 'Machine Learning & AI Algorithms', 'Generative AI & Large Language Models', 'MLOps & ML Engineering', 'Analytical & Development Tools', 'Databases & Data Stores', 'Vector Databases', 'Big Data & Streaming Frameworks', 'Cloud Platforms & DevOps', 'Data Visualization & BI', 'Version Control & CI/CD', 'Operating Systems', 'Security, Privacy & Governance'"
+    : "'Cloud Platforms', 'Data Processing & Orchestration', 'Databases & Warehousing', 'BI & Visualization', 'Languages', 'DevOps & IaC'";
+
+  const jdPhrases = jobDescription.text
+    .split(/[.!?\n]/)
+    .filter(s => s.trim().length > 20)
+    .slice(0, 10)
+    .map(s => s.trim());
+
+  const userPrompt = `**BASE RESUME (ORIGINAL BULLETS - MUST BE TRANSFORMED):**
+${JSON.stringify(baseResume, null, 2)}
+
+**TARGET JOB:**
+Title: ${jobDescription.jobTitle}
+Company: ${jobDescription.companyName}
+
+**JOB DESCRIPTION:**
+${jobDescription.text}
+
+**KEY PHRASES FROM JD TO MIRROR IN YOUR BULLETS:**
+${jdPhrases.map((p, i) => `${i + 1}. "${p}"`).join('\n')}
+
+**HIGH-PRIORITY KEYWORDS (MUST APPEAR IN BULLETS):**
+${jobDescription.requiredSkills.slice(0, 10).join(', ')}
+
+**ADDITIONAL KEYWORDS:**
+${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
+
+**TRANSFORMATION INSTRUCTIONS (CRITICAL - READ CAREFULLY):**
+
+1. **MANDATORY BULLET TRANSFORMATION**:
+   - You MUST rewrite every bullet point to use language from the job description
+   - Do NOT return bullets that look similar to the original
+   - Each bullet should incorporate at least one keyword from the JD
+
+2. **EXAMPLE TRANSFORMATION FOR THIS JOB:**
+   - If original says: "Built features for the product"
+   - JD mentions: "${jobDescription.requiredSkills[0] || 'key skill'}"
+   - Transform to: "Developed ${jobDescription.requiredSkills[0] || 'key skill'}-focused features that drove measurable business impact"
+
+3. **VERIFICATION CHECKLIST (YOU MUST FOLLOW):**
+   - [ ] Each bullet starts with a strong action verb (not "Responsible for")
+   - [ ] Each bullet contains at least one JD keyword
+   - [ ] Each bullet uses JD phrasing, not generic language
+   - [ ] Metrics from original bullets are preserved
+   - [ ] Total bullet count matches or exceeds original
+
+4. **SUMMARY**: Create a compelling summary for a "${jobDescription.jobTitle}" at ${jobDescription.companyName || 'this company'}
+
+5. **KEYWORD TRACKING**: Provide 10-15 keyword insights showing exactly where you placed each keyword
+
+6. **CATEGORIZATION**: Use these categories: ${skillCategories}
+
+**FINAL WARNING**: Your response will be REJECTED if bullet points are not substantially reframed to match the job description. Transform, don't copy!
+
+**OUTPUT SIZE WARNING**: Keep bullets concise (80-120 chars each). Do not be overly verbose. Complete the FULL JSON response.`;
+
+  try {
+    onProgress?.({ percentage: 5, stage: 'Connecting to AI service...' });
+
+    const response = await fetch('/api/generate-stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        max_tokens: 8000,
+        system: SYSTEM_PROMPT,
+        messages: [
+          {
+            role: 'user',
+            content: userPrompt
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      const responseText = await response.text();
+      if (responseText.trim().startsWith('<')) {
+        throw new Error('Request timed out. Please try again with a shorter job description.');
+      }
+      try {
+        const error = JSON.parse(responseText);
+        throw new Error(error.error?.message || error.error || 'API request failed');
+      } catch {
+        throw new Error('API request failed. Please try again.');
+      }
+    }
+
+    onProgress?.({ percentage: 10, stage: 'AI is generating your resume...' });
+
+    let charCount = 0;
+    let lastProgressUpdate = Date.now();
+    const PROGRESS_THROTTLE_MS = 150; // Update progress every 150ms max
+
+    const content = await consumeAnthropicStream(response, {
+      onToken: (token) => {
+        charCount += token.length;
+        const now = Date.now();
+
+        // Throttle progress updates to avoid too many re-renders
+        if (now - lastProgressUpdate > PROGRESS_THROTTLE_MS) {
+          const percentage = estimateProgress(charCount);
+          onProgress?.({
+            percentage,
+            stage: 'Generating tailored resume...',
+            partialContent: token
+          });
+          lastProgressUpdate = now;
+        }
+      },
+      onComplete: () => {
+        onProgress?.({ percentage: 95, stage: 'Processing response...' });
+      },
+      onError: (error) => {
+        console.error('Stream error:', error);
+      }
+    });
+
+    // Parse the JSON response (same logic as original function)
+    let tailoredData: any;
+    try {
+      const jsonStart = content.indexOf('{');
+      const jsonEnd = content.lastIndexOf('}');
+
+      if (jsonStart === -1 || jsonEnd === -1) {
+        throw new Error('No JSON object found in response');
+      }
+
+      const jsonString = content.substring(jsonStart, jsonEnd + 1);
+
+      if (jsonString.match(/[^}\]"]\s*$/)) {
+        throw new Error('Response was truncated. The AI output was cut off before completing. Please try again.');
+      }
+
+      tailoredData = JSON.parse(jsonString);
+    } catch (parseError) {
+      console.error('JSON Parse Error:', parseError);
+      console.error('Raw response:', content);
+
+      if (content.length > 10000 && !content.trim().endsWith('}')) {
+        throw new Error('Response was truncated due to length. Please try with a simpler resume or shorter job description.');
+      }
+
+      throw new Error('Failed to parse AI response. Please try again.');
+    }
+
+    onProgress?.({ percentage: 97, stage: 'Finalizing resume...' });
+
+    // Process skill categories (same logic as original)
+    if (Array.isArray(tailoredData.skillCategories)) {
+      tailoredData.skillCategories = tailoredData.skillCategories
+        .filter((cat: any) => {
+          const name = String(cat.category || '').toLowerCase().trim();
+          if ((name === 'technical skills' || name === 'skills') && tailoredData.skillCategories.length > 3) {
+            return false;
+          }
+          return true;
+        })
+        .map((cat: any) => {
+          if (typeof cat.skills === 'string') {
+            cat.skills = (cat.skills as string).split(',').map(s => s.trim()).filter(Boolean);
+          }
+          if (!Array.isArray(cat.skills)) {
+            cat.skills = [];
+          }
+          cat.category = String(cat.category || '').trim().replace(/:$/, '');
+          return cat;
+        })
+        .filter((cat: any) => cat.skills && cat.skills.length > 0);
+    }
+
+    let tailoredCategories: any[] = [];
+    if (Array.isArray(tailoredData.skillCategories)) {
+      tailoredCategories = [...tailoredData.skillCategories];
+    }
+
+    const tailoredSkillsSet = new Set<string>();
+    try {
+      tailoredCategories.forEach(cat => {
+        if (cat && Array.isArray(cat.skills)) {
+          cat.skills.forEach((s: string) => tailoredSkillsSet.add(String(s).toLowerCase().trim()));
+        }
+      });
+    } catch (e) {
+      console.warn('Error processing tailored skills:', e);
+    }
+
+    const seenSkillsSet = new Set<string>();
+    tailoredCategories = tailoredCategories.map((cat) => {
+      if (cat && Array.isArray(cat.skills)) {
+        const uniqueSkills = cat.skills.filter((skill: string) => {
+          const normalized = skill.toLowerCase().trim();
+          if (seenSkillsSet.has(normalized)) return false;
+          seenSkillsSet.add(normalized);
+          return true;
+        });
+        return { ...cat, skills: uniqueSkills };
+      }
+      return cat;
+    }).filter(cat => cat.skills && cat.skills.length > 0);
+
+    const baseSkills = Array.isArray(baseResume.skills) ? baseResume.skills : [];
+    const missingBaseSkills = baseSkills.filter(skill =>
+      !tailoredSkillsSet.has(String(skill).toLowerCase().trim())
+    );
+
+    if (missingBaseSkills.length > 0) {
+      const uniqueMissing = Array.from(new Set(missingBaseSkills));
+      if (uniqueMissing.length > 0) {
+        let targetCategory = tailoredCategories.find(c =>
+          ['tools', 'technical skills', 'technologies', 'other', 'analytical & development tools'].includes(c.category.toLowerCase())
+        );
+
+        if (!targetCategory) {
+          targetCategory = { category: 'Technical Skills', skills: [] };
+          tailoredCategories.push(targetCategory);
+        }
+
+        targetCategory.skills = Array.from(new Set([...targetCategory.skills, ...uniqueMissing]));
+      }
+    }
+
+    tailoredCategories = tailoredCategories.filter(cat => cat.skills && cat.skills.length > 0);
+
+    if (tailoredCategories.length === 0 && baseSkills.length > 0) {
+      tailoredCategories.push({
+        category: 'Technical Skills',
+        skills: baseSkills
+      });
+    }
+
+    const tailoredResume: BaseResume = {
+      personal: baseResume.personal,
+      summary: tailoredData.summary || baseResume.summary,
+      experience: tailoredData.experience.map((exp: any, index: number) => {
+        const matchingBase = baseResume.experience.find(
+          (base) => base.company.toLowerCase() === exp.company?.toLowerCase()
+        ) || baseResume.experience[index];
+
+        return {
+          id: matchingBase?.id || `exp-${Date.now()}-${index}`,
+          title: exp.title || matchingBase?.title || '',
+          company: exp.company || matchingBase?.company || '',
+          location: matchingBase?.location || exp.location || '',
+          startDate: exp.startDate || matchingBase?.startDate || '',
+          endDate: exp.endDate || matchingBase?.endDate || '',
+          current: (exp.endDate || matchingBase?.endDate || '').toLowerCase().includes('present'),
+          bullets: exp.bullets || matchingBase?.bullets || []
+        };
+      }),
+      education: tailoredData.education.map((edu: any, index: number) => ({
+        id: baseResume.education[index]?.id || `edu-${Date.now()}-${index}`,
+        degree: edu.degree,
+        institution: edu.institution,
+        location: edu.location || baseResume.education[index]?.location || '',
+        graduationDate: edu.graduationDate || '',
+        gpa: edu.gpa || ''
+      })),
+      skills: Array.from(new Set([
+        ...baseSkills,
+        ...(Array.isArray(tailoredData.skills) ? tailoredData.skills : [])
+      ])),
+      skillCategories: tailoredCategories,
+      projects: (tailoredData.projects || baseResume.projects || []).map((proj: any, index: number) => {
+        const matchingBase = (baseResume.projects || []).find(
+          (base) => base.name.toLowerCase() === proj.name?.toLowerCase()
+        ) || (baseResume.projects || [])[index];
+
+        return {
+          id: matchingBase?.id || `proj-${Date.now()}-${index}`,
+          name: proj.name || matchingBase?.name || '',
+          description: proj.description || matchingBase?.description || '',
+          bullets: proj.bullets || matchingBase?.bullets || [],
+          link: proj.link || matchingBase?.link || '',
+          startDate: proj.startDate || matchingBase?.startDate || '',
+          endDate: proj.endDate || matchingBase?.endDate || ''
+        };
+      }),
+      certifications: tailoredData.certifications || baseResume.certifications,
+      keywordInsights: tailoredData.keywordInsights || []
+    };
+
+    onProgress?.({ percentage: 100, stage: 'Complete!' });
 
     return validateAndCleanResume(tailoredResume);
   } catch (error) {
