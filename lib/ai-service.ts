@@ -115,15 +115,54 @@ Return ONLY valid JSON:
 CRITICAL REMINDER: Your output will be REJECTED if bullet points are not substantially reframed to match the job description. Every bullet must demonstrate clear JD alignment with quantified impact.`;
 
 
+// Detect role type and return appropriate skill categories
+function detectRoleTypeAndCategories(jobTitle: string, jobText: string): string {
+  const combined = (jobTitle + ' ' + jobText).toLowerCase();
+
+  // AI/ML Role
+  if (/ml|machine learning|artificial intelligence|generative ai|llm|data science|deep learning|neural network/i.test(combined)) {
+    return "'Programming Languages', 'Machine Learning & AI', 'Data Engineering', 'Cloud Platforms', 'Tools & Frameworks'";
+  }
+
+  // Pharmaceutical/Regulatory/Healthcare Role
+  if (/regulatory|fda|ema|ich|gxp|gmp|gcp|glp|pharma|clinical|drug|medical|healthcare|biologics|pharmacovigilance|quality management|cmc|ctd|nda|ind|bla/i.test(combined)) {
+    return "'Regulatory & Compliance', 'Quality Management', 'Clinical & Scientific', 'Documentation & Systems', 'Industry Knowledge'";
+  }
+
+  // Finance/Accounting Role
+  if (/gaap|ifrs|sox|financial|accounting|audit|cpa|tax|treasury|revenue|budget|forecast|reconciliation|p&l|balance sheet/i.test(combined)) {
+    return "'Financial Reporting', 'Accounting Systems', 'Compliance & Audit', 'Analysis & Planning', 'Software & Tools'";
+  }
+
+  // Legal/Compliance Role
+  if (/legal|attorney|lawyer|paralegal|contract|litigation|intellectual property|corporate governance|compliance program|kyc|aml/i.test(combined)) {
+    return "'Legal Expertise', 'Compliance & Risk', 'Contract Management', 'Research & Analysis', 'Industry Knowledge'";
+  }
+
+  // Marketing/Sales Role
+  if (/marketing|seo|sem|ppc|brand|digital marketing|social media|content|lead generation|crm|salesforce|hubspot|sales/i.test(combined)) {
+    return "'Digital Marketing', 'Analytics & Data', 'CRM & Tools', 'Content & Creative', 'Strategy & Planning'";
+  }
+
+  // HR/People Role
+  if (/hr|human resources|talent|recruiting|onboarding|compensation|benefits|hris|workday|employee relations|organizational development/i.test(combined)) {
+    return "'HR Operations', 'Talent Management', 'HRIS & Tools', 'Compliance & Policy', 'Employee Development'";
+  }
+
+  // Operations/Project Management
+  if (/operations|supply chain|procurement|logistics|project management|pmp|agile|scrum|six sigma|lean|process improvement/i.test(combined)) {
+    return "'Project Management', 'Process Improvement', 'Operations', 'Tools & Systems', 'Leadership'";
+  }
+
+  // Default: General Tech/Business
+  return "'Technical Skills', 'Tools & Platforms', 'Methodologies', 'Industry Knowledge', 'Soft Skills'";
+}
+
 export async function generateTailoredResume(
   baseResume: BaseResume,
   jobDescription: JobDescription
 ): Promise<BaseResume> {
-  const isAIMLRole = /ml|ai|machine learning|artificial intelligence|generative ai|llm|data science/i.test(jobDescription.jobTitle + ' ' + jobDescription.text);
-
-  const skillCategories = isAIMLRole
-    ? "'Programming Languages', 'Machine Learning & AI Algorithms', 'Generative AI & Large Language Models', 'MLOps & ML Engineering', 'Analytical & Development Tools', 'Databases & Data Stores', 'Vector Databases', 'Big Data & Streaming Frameworks', 'Cloud Platforms & DevOps', 'Data Visualization & BI', 'Version Control & CI/CD', 'Operating Systems', 'Security, Privacy & Governance'"
-    : "'Cloud Platforms', 'Data Processing & Orchestration', 'Databases & Warehousing', 'BI & Visualization', 'Languages', 'DevOps & IaC'";
+  const skillCategories = detectRoleTypeAndCategories(jobDescription.jobTitle, jobDescription.text);
 
   // Extract key phrases from job description for targeted reframing
   const jdPhrases = jobDescription.text
@@ -131,6 +170,10 @@ export async function generateTailoredResume(
     .filter(s => s.trim().length > 20)
     .slice(0, 10)
     .map(s => s.trim());
+
+  // Combine all keywords for explicit inclusion
+  const allKeywords = [...new Set([...jobDescription.requiredSkills, ...jobDescription.extractedKeywords])];
+  const keywordsToInclude = allKeywords.slice(0, 25);
 
   const userPrompt = `**BASE RESUME (ORIGINAL BULLETS - MUST BE TRANSFORMED):**
 ${JSON.stringify(baseResume, null, 2)}
@@ -145,38 +188,41 @@ ${jobDescription.text}
 **KEY PHRASES FROM JD TO MIRROR IN YOUR BULLETS:**
 ${jdPhrases.map((p, i) => `${i + 1}. "${p}"`).join('\n')}
 
-**HIGH-PRIORITY KEYWORDS (MUST APPEAR IN BULLETS):**
-${jobDescription.requiredSkills.slice(0, 10).join(', ')}
+**CRITICAL: KEYWORDS THAT MUST APPEAR IN YOUR OUTPUT (ALL OF THESE):**
+${keywordsToInclude.map((kw, i) => `${i + 1}. ${kw}`).join('\n')}
 
-**ADDITIONAL KEYWORDS:**
-${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
+**HOW TO INCLUDE EACH KEYWORD:**
+- In the SUMMARY: Include at least 3-4 of the top keywords
+- In EXPERIENCE bullets: Each bullet should contain 1-2 keywords from the list above
+- In SKILLS array: Add ALL keywords that are skills/technologies/tools
+- In SKILL CATEGORIES: Organize the keywords into appropriate categories
 
 **TRANSFORMATION INSTRUCTIONS (CRITICAL - READ CAREFULLY):**
 
-1. **MANDATORY BULLET TRANSFORMATION**: 
+1. **MANDATORY BULLET TRANSFORMATION**:
    - You MUST rewrite every bullet point to use language from the job description
    - Do NOT return bullets that look similar to the original
    - Each bullet should incorporate at least one keyword from the JD
-   
+
 2. **EXAMPLE TRANSFORMATION FOR THIS JOB:**
    - If original says: "Built features for the product"
    - JD mentions: "${jobDescription.requiredSkills[0] || 'key skill'}"
    - Transform to: "Developed ${jobDescription.requiredSkills[0] || 'key skill'}-focused features that drove measurable business impact"
 
-3. **VERIFICATION CHECKLIST (YOU MUST FOLLOW):**
-   - [ ] Each bullet starts with a strong action verb (not "Responsible for")
-   - [ ] Each bullet contains at least one JD keyword
-   - [ ] Each bullet uses JD phrasing, not generic language
-   - [ ] Metrics from original bullets are preserved
-   - [ ] Total bullet count matches or exceeds original
+3. **SKILLS SECTION - CRITICAL:**
+   - Add ALL of these keywords to the skills array: ${keywordsToInclude.slice(0, 15).join(', ')}
+   - Include the base resume skills AND add new JD-relevant skills
+   - Organize into categories: ${skillCategories}
 
 4. **SUMMARY**: Create a compelling summary for a "${jobDescription.jobTitle}" at ${jobDescription.companyName || 'this company'}
+   - MUST include these keywords: ${keywordsToInclude.slice(0, 5).join(', ')}
 
 5. **KEYWORD TRACKING**: Provide 10-15 keyword insights showing exactly where you placed each keyword
 
-6. **CATEGORIZATION**: Use these categories: ${skillCategories}
-
-**FINAL WARNING**: Your response will be REJECTED if bullet points are not substantially reframed to match the job description. Transform, don't copy!
+**FINAL WARNING**: Your response will be REJECTED if:
+- Bullet points are not substantially reframed to match the job description
+- Required keywords are not included in the output
+- Skills section doesn't include JD-relevant terms
 
 **OUTPUT SIZE WARNING**: Keep bullets concise (80-120 chars each). Do not be overly verbose. Complete the FULL JSON response.`;
 
@@ -423,17 +469,17 @@ export async function generateTailoredResumeStreaming(
   jobDescription: JobDescription,
   onProgress?: (progress: StreamProgress) => void
 ): Promise<BaseResume> {
-  const isAIMLRole = /ml|ai|machine learning|artificial intelligence|generative ai|llm|data science/i.test(jobDescription.jobTitle + ' ' + jobDescription.text);
-
-  const skillCategories = isAIMLRole
-    ? "'Programming Languages', 'Machine Learning & AI Algorithms', 'Generative AI & Large Language Models', 'MLOps & ML Engineering', 'Analytical & Development Tools', 'Databases & Data Stores', 'Vector Databases', 'Big Data & Streaming Frameworks', 'Cloud Platforms & DevOps', 'Data Visualization & BI', 'Version Control & CI/CD', 'Operating Systems', 'Security, Privacy & Governance'"
-    : "'Cloud Platforms', 'Data Processing & Orchestration', 'Databases & Warehousing', 'BI & Visualization', 'Languages', 'DevOps & IaC'";
+  const skillCategories = detectRoleTypeAndCategories(jobDescription.jobTitle, jobDescription.text);
 
   const jdPhrases = jobDescription.text
     .split(/[.!?\n]/)
     .filter(s => s.trim().length > 20)
     .slice(0, 10)
     .map(s => s.trim());
+
+  // Combine all keywords for explicit inclusion
+  const allKeywords = [...new Set([...jobDescription.requiredSkills, ...jobDescription.extractedKeywords])];
+  const keywordsToInclude = allKeywords.slice(0, 25);
 
   const userPrompt = `**BASE RESUME (ORIGINAL BULLETS - MUST BE TRANSFORMED):**
 ${JSON.stringify(baseResume, null, 2)}
@@ -448,11 +494,14 @@ ${jobDescription.text}
 **KEY PHRASES FROM JD TO MIRROR IN YOUR BULLETS:**
 ${jdPhrases.map((p, i) => `${i + 1}. "${p}"`).join('\n')}
 
-**HIGH-PRIORITY KEYWORDS (MUST APPEAR IN BULLETS):**
-${jobDescription.requiredSkills.slice(0, 10).join(', ')}
+**CRITICAL: KEYWORDS THAT MUST APPEAR IN YOUR OUTPUT (ALL OF THESE):**
+${keywordsToInclude.map((kw, i) => `${i + 1}. ${kw}`).join('\n')}
 
-**ADDITIONAL KEYWORDS:**
-${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
+**HOW TO INCLUDE EACH KEYWORD:**
+- In the SUMMARY: Include at least 3-4 of the top keywords
+- In EXPERIENCE bullets: Each bullet should contain 1-2 keywords from the list above
+- In SKILLS array: Add ALL keywords that are skills/technologies/tools
+- In SKILL CATEGORIES: Organize the keywords into appropriate categories
 
 **TRANSFORMATION INSTRUCTIONS (CRITICAL - READ CAREFULLY):**
 
@@ -466,20 +515,20 @@ ${jobDescription.extractedKeywords.slice(0, 15).join(', ')}
    - JD mentions: "${jobDescription.requiredSkills[0] || 'key skill'}"
    - Transform to: "Developed ${jobDescription.requiredSkills[0] || 'key skill'}-focused features that drove measurable business impact"
 
-3. **VERIFICATION CHECKLIST (YOU MUST FOLLOW):**
-   - [ ] Each bullet starts with a strong action verb (not "Responsible for")
-   - [ ] Each bullet contains at least one JD keyword
-   - [ ] Each bullet uses JD phrasing, not generic language
-   - [ ] Metrics from original bullets are preserved
-   - [ ] Total bullet count matches or exceeds original
+3. **SKILLS SECTION - CRITICAL:**
+   - Add ALL of these keywords to the skills array: ${keywordsToInclude.slice(0, 15).join(', ')}
+   - Include the base resume skills AND add new JD-relevant skills
+   - Organize into categories: ${skillCategories}
 
 4. **SUMMARY**: Create a compelling summary for a "${jobDescription.jobTitle}" at ${jobDescription.companyName || 'this company'}
+   - MUST include these keywords: ${keywordsToInclude.slice(0, 5).join(', ')}
 
 5. **KEYWORD TRACKING**: Provide 10-15 keyword insights showing exactly where you placed each keyword
 
-6. **CATEGORIZATION**: Use these categories: ${skillCategories}
-
-**FINAL WARNING**: Your response will be REJECTED if bullet points are not substantially reframed to match the job description. Transform, don't copy!
+**FINAL WARNING**: Your response will be REJECTED if:
+- Bullet points are not substantially reframed to match the job description
+- Required keywords are not included in the output
+- Skills section doesn't include JD-relevant terms
 
 **OUTPUT SIZE WARNING**: Keep bullets concise (80-120 chars each). Do not be overly verbose. Complete the FULL JSON response.`;
 

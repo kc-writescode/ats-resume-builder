@@ -483,18 +483,22 @@ function generateSuggestions(
     }
   }
 
-  // Specific keyword suggestions based on job type
+  // Context-aware suggestions based on job description content
   const jdLower = jobDescription.text.toLowerCase();
-  if (jdLower.includes('machine learning') || jdLower.includes('data science') || jdLower.includes('ml') || jdLower.includes('ai')) {
-    if (!resumeText.includes('model') && !resumeText.includes('algorithm')) {
-      suggestions.push('🤖 For ML/AI roles, emphasize model development, algorithms, and data pipeline experience');
-    }
+
+  // Only suggest leadership if JD mentions it AND resume doesn't demonstrate it
+  if ((jdLower.includes('leadership') || jdLower.includes('manage team') || jdLower.includes('lead team')) &&
+      !resumeText.includes('led') && !resumeText.includes('managed') && !resumeText.includes('mentored')) {
+    suggestions.push('👥 Highlight leadership experience: team size, mentoring, cross-functional collaboration');
   }
 
-  if (jdLower.includes('leadership') || jdLower.includes('manage') || jdLower.includes('lead')) {
-    if (!resumeText.includes('led') && !resumeText.includes('managed') && !resumeText.includes('mentored')) {
-      suggestions.push('👥 Highlight leadership experience: team size, mentoring, cross-functional collaboration');
-    }
+  // Suggest adding missing high-impact keywords from JD
+  const missingHighPriority = jobDescription.requiredSkills
+    .filter(skill => !resumeText.includes(skill.toLowerCase()))
+    .slice(0, 3);
+
+  if (missingHighPriority.length > 0 && suggestions.length < 5) {
+    suggestions.push(`💡 Consider incorporating these terms naturally: ${missingHighPriority.map(k => capitalizeWithAcronyms(k)).join(', ')}`);
   }
 
   // Limit suggestions to most impactful
@@ -554,7 +558,7 @@ export function extractKeywordsFromJobDescription(jobDescription: string): JobDe
   const titlePatterns = [
     /(?:position|role|title|job):\s*([^\n]+)/i,
     /(?:hiring|seeking|looking for)\s+(?:a|an)?\s*([^\n,]+)/i,
-    /^([A-Z][A-Za-z\s]+(?:Engineer|Developer|Manager|Analyst|Architect|Lead|Director|Specialist|Scientist|Designer))/m,
+    /^([A-Z][A-Za-z\s]+(?:Engineer|Developer|Manager|Analyst|Architect|Lead|Director|Specialist|Scientist|Designer|Officer|Coordinator|Associate|Consultant))/m,
     /^#*\s*([A-Z][A-Za-z\s\/]+)$/m
   ];
 
@@ -583,81 +587,109 @@ export function extractKeywordsFromJobDescription(jobDescription: string): JobDe
     }
   }
 
-  // Comprehensive skill patterns for high-impact keywords
+  // Comprehensive patterns for ALL industries
   const skillPatterns = [
-    // Programming Languages
+    // Technology - Programming
     /\b(python|java|javascript|typescript|c\+\+|c#|go|golang|rust|scala|kotlin|ruby|php|swift|r\b|matlab|perl|shell|bash|powershell)(?:\s*3)?/gi,
-    // Frontend
-    /\b(react|angular|vue\.?js|next\.?js|nuxt|svelte|html5?|css3?|sass|less|tailwind|bootstrap|redux|zustand|webpack|vite|gatsby)(?:\.?js)?/gi,
-    // Backend & APIs
-    /\b(node\.?js|express|django|flask|fastapi|spring\s*boot?|\.net|rails|laravel|graphql|rest\s*api|grpc|websocket|microservices|serverless)(?:\.?js)?/gi,
-    // Databases
-    /\b(sql|mysql|postgresql|postgres|mongodb|redis|elasticsearch|dynamodb|cassandra|oracle|sql\s*server|nosql|sqlite|neo4j|snowflake|bigquery|redshift|databricks)(?:\s*db)?/gi,
-    // Cloud & Infrastructure
-    /\b(aws|amazon\s*web\s*services|azure|gcp|google\s*cloud|ec2|s3|lambda|cloudformation|terraform|ansible|pulumi|kubernetes|k8s|docker|ecs|eks|fargate|cloudwatch|datadog|splunk)(?:\s*platform)?/gi,
-    // DevOps & CI/CD
-    /\b(ci\/cd|jenkins|github\s*actions|gitlab\s*ci|circleci|travis|devops|sre|site\s*reliability|linux|unix|bash|shell|git|gitops|argocd|helm)(?:\s*ci)?/gi,
-    // Data Engineering
-    /\b(etl|elt|data\s*pipeline|airflow|dbt|spark|pyspark|hadoop|hdfs|kafka|kinesis|flink|beam|data\s*lake|data\s*warehouse|data\s*modeling|dimensional\s*modeling)(?:\s*pipeline)?/gi,
-    // ML/AI/Data Science
-    /\b(machine\s*learning|deep\s*learning|neural\s*network|nlp|natural\s*language|computer\s*vision|tensorflow|pytorch|keras|scikit|sklearn|pandas|numpy|hugging\s*face|transformers|llm|gpt|bert|rag|langchain|vector\s*database|embeddings|mlops|mlflow|sagemaker|vertex\s*ai)(?:\s*model)?/gi,
-    // BI & Analytics
-    /\b(tableau|power\s*bi|looker|metabase|superset|domo|sisense|quicksight|analytics|business\s*intelligence|data\s*visualization|reporting|dashboards)(?:\s*tool)?/gi,
-    // Methodologies & Practices
-    /\b(agile|scrum|kanban|waterfall|lean|sdlc|tdd|bdd|pair\s*programming|code\s*review|ci\/cd|devops|gitflow|trunk\s*based)(?:\s*methodology)?/gi,
-    // Architecture & Design
-    /\b(system\s*design|architecture|microservices|monolith|scalable|distributed\s*systems|event[\s-]driven|cqrs|saga|api\s*design|design\s*patterns|solid|dry|clean\s*code|domain\s*driven)(?:\s*design)?/gi,
-    // Security & Compliance
-    /\b(security|authentication|authorization|oauth|jwt|saml|sso|encryption|compliance|soc\s*2|hipaa|gdpr|pci|owasp|penetration|vulnerability)(?:\s*testing)?/gi,
-    // Testing & Quality
-    /\b(unit\s*test|integration\s*test|e2e|end[\s-]to[\s-]end|selenium|cypress|jest|pytest|junit|testing|qa|quality\s*assurance|automation\s*test)(?:ing)?/gi,
-    // Collaboration & Project Management
-    /\b(jira|confluence|asana|trello|notion|linear|monday|slack|teams|cross[\s-]functional|stakeholder|agile|scrum\s*master|product\s*owner)(?:\s*tool)?/gi,
+    // Technology - Frontend/Backend/Cloud
+    /\b(react|angular|vue\.?js|next\.?js|node\.?js|express|django|flask|spring|aws|azure|gcp|docker|kubernetes|sql|mysql|postgresql|mongodb|redis|graphql|rest\s*api|microservices|serverless|terraform|ci\/cd|jenkins|git)(?:\.?js)?/gi,
+    // Data & Analytics
+    /\b(etl|data\s*pipeline|airflow|spark|kafka|tableau|power\s*bi|looker|analytics|business\s*intelligence|data\s*warehouse|snowflake|bigquery|machine\s*learning|deep\s*learning|nlp|tensorflow|pytorch)(?:\s*model)?/gi,
+
+    // Healthcare & Pharma & Regulatory
+    /\b(fda|ema|ich|gxp|gmp|gcp|glp|regulatory\s*affairs|clinical\s*trials?|ind|nda|bla|anda|510\(k\)|pma|cmc|ctd|ectd|regulatory\s*submissions?|drug\s*safety|pharmacovigilance|adverse\s*events?|medical\s*devices?|biologics?|pharmaceuticals?|qms|quality\s*management|capa|deviation|validation|qualification|sop|standard\s*operating|audit|inspection|labeling|post[\s-]?market|pre[\s-]?market|clinical\s*development|clinical\s*operations|medical\s*writing|regulatory\s*strategy|health\s*authorities?|dossier|module\s*[1-5])/gi,
+
+    // Finance & Accounting
+    /\b(gaap|ifrs|sox|sarbanes[\s-]?oxley|financial\s*reporting|audit|budgeting|forecasting|p&l|profit\s*and\s*loss|balance\s*sheet|cash\s*flow|accounts\s*payable|accounts\s*receivable|general\s*ledger|month[\s-]?end\s*close|reconciliation|variance\s*analysis|financial\s*modeling|m&a|due\s*diligence|valuation|erp|sap|oracle\s*financials|netsuite|quickbooks|cpa|cfa|tax\s*compliance|treasury|working\s*capital|revenue\s*recognition)/gi,
+
+    // Legal & Compliance
+    /\b(contract\s*management|contract\s*review|litigation|intellectual\s*property|patents?|trademarks?|corporate\s*governance|compliance\s*program|risk\s*management|due\s*diligence|kyc|aml|anti[\s-]?money\s*laundering|sanctions|regulatory\s*compliance|data\s*privacy|gdpr|ccpa|hipaa|legal\s*research|legal\s*writing|paralegal|corporate\s*law|employment\s*law)/gi,
+
+    // Marketing & Sales
+    /\b(digital\s*marketing|seo|sem|ppc|google\s*ads|facebook\s*ads|social\s*media|content\s*marketing|email\s*marketing|marketing\s*automation|hubspot|salesforce|crm|lead\s*generation|conversion\s*rate|roi|brand\s*management|market\s*research|competitive\s*analysis|go[\s-]?to[\s-]?market|product\s*launch|pricing\s*strategy|sales\s*enablement|account\s*management|business\s*development|partnership)/gi,
+
+    // HR & Operations
+    /\b(talent\s*acquisition|recruiting|onboarding|performance\s*management|compensation|benefits|hris|workday|successfactors|employee\s*relations|organizational\s*development|learning\s*&?\s*development|workforce\s*planning|diversity|inclusion|change\s*management|process\s*improvement|six\s*sigma|lean|kaizen|supply\s*chain|procurement|logistics|inventory\s*management|vendor\s*management|project\s*management|pmp|agile|scrum|waterfall)/gi,
+
+    // Engineering & Manufacturing
+    /\b(mechanical\s*engineering|electrical\s*engineering|civil\s*engineering|chemical\s*engineering|process\s*engineering|manufacturing|cad|solidworks|autocad|catia|plc|scada|automation|robotics|quality\s*control|quality\s*assurance|iso\s*\d+|lean\s*manufacturing|production\s*planning|capacity\s*planning|maintenance|reliability|safety|osha|environmental)/gi,
+
+    // General Business Skills
+    /\b(strategic\s*planning|business\s*strategy|stakeholder\s*management|cross[\s-]?functional|executive\s*presentations?|board\s*presentations?|budget\s*management|team\s*leadership|people\s*management|mentoring|coaching|negotiation|problem[\s-]?solving|decision[\s-]?making|communication|presentation|microsoft\s*office|excel|powerpoint|word|outlook)/gi,
   ];
 
   const extractedKeywords: string[] = [];
 
+  // Extract from patterns
   skillPatterns.forEach(pattern => {
     const matches = text.match(pattern);
     if (matches) {
       matches.forEach(match => {
         const normalized = match.trim().toLowerCase().replace(/\s+/g, ' ');
-        if (!extractedKeywords.includes(normalized) && normalized.length > 1) {
+        if (!extractedKeywords.includes(normalized) && normalized.length > 2) {
           extractedKeywords.push(normalized);
         }
       });
     }
   });
 
-  // Extract required skills from requirements/qualifications sections with improved parsing
+  // Extract capitalized terms/acronyms (often important industry terms)
+  const capitalizedTerms = originalText.match(/\b[A-Z]{2,}(?:\s*[A-Z]{2,})*\b/g) || [];
+  capitalizedTerms.forEach(term => {
+    const normalized = term.toLowerCase();
+    if (!extractedKeywords.includes(normalized) && normalized.length >= 2 && normalized.length <= 15) {
+      // Skip common non-keywords
+      if (!['the', 'and', 'for', 'with', 'our', 'you', 'will', 'this', 'that', 'have', 'your', 'are'].includes(normalized)) {
+        extractedKeywords.push(normalized);
+      }
+    }
+  });
+
+  // Extract important multi-word phrases (Title Case phrases often indicate key terms)
+  const titleCasePhrases = originalText.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+\b/g) || [];
+  titleCasePhrases.forEach(phrase => {
+    const normalized = phrase.toLowerCase();
+    if (!extractedKeywords.includes(normalized) && normalized.length > 5 && normalized.split(' ').length <= 4) {
+      extractedKeywords.push(normalized);
+    }
+  });
+
+  // Extract required skills from requirements sections
   const requiredSkills: string[] = [];
   const reqPatterns = [
-    /(?:requirements?|qualifications?|must\s*have|required|what\s*you['']?ll?\s*need|what\s*we['']?re\s*looking\s*for|you\s*have)[:\s]*([^]*?)(?:\n\n|nice\s*to\s*have|preferred|bonus|responsibilities|duties|benefits|about\s*us|what\s*we\s*offer|$)/gi,
-    /(?:you\s*will|you['']ll|the\s*ideal\s*candidate)[:\s]*([^]*?)(?:\n\n|$)/gi
+    /(?:requirements?|qualifications?|must\s*have|required|what\s*you['']?ll?\s*need|what\s*we['']?re\s*looking\s*for|you\s*have|key\s*responsibilities|essential)[:\s]*([^]*?)(?:\n\n|nice\s*to\s*have|preferred|bonus|benefits|about\s*us|what\s*we\s*offer|$)/gi,
+    /(?:you\s*will|you['']ll|the\s*ideal\s*candidate|experience\s*with|knowledge\s*of|proficiency\s*in)[:\s]*([^]*?)(?:\n\n|$)/gi
   ];
 
   reqPatterns.forEach(reqPattern => {
     const reqSections = text.match(reqPattern);
     if (reqSections) {
       reqSections.forEach(section => {
-        // Look for bulleted items or numbered lists
         const items = section.match(/[•\-\*]\s*([^\n•\-\*]+)/g) || section.match(/\d+[.)]\s*([^\n]+)/g) || [];
         items.forEach(item => {
           const cleaned = item.replace(/^[•\-\*\d+.)]\s*/, '').trim();
-          // Skip years of experience and education requirements
           if (cleaned.length > 5 &&
             !cleaned.match(/^\d+\+?\s*years?/i) &&
             !cleaned.match(/^bachelor|^master|^degree|^education|^bs\s|^ms\s|^phd/i)) {
-            // Extract key technical terms
+            // Extract ALL matching terms from this requirement
             skillPatterns.forEach(pattern => {
               const techMatches = cleaned.match(pattern);
               if (techMatches) {
                 techMatches.forEach(term => {
                   const normalized = term.toLowerCase().trim();
-                  if (!requiredSkills.includes(normalized) && normalized.length > 1) {
+                  if (!requiredSkills.includes(normalized) && normalized.length > 2) {
                     requiredSkills.push(normalized);
                   }
                 });
+              }
+            });
+
+            // Also extract any capitalized terms from requirements
+            const capTerms = cleaned.match(/\b[A-Z]{2,}\b/g) || [];
+            capTerms.forEach(term => {
+              const normalized = term.toLowerCase();
+              if (!requiredSkills.includes(normalized) && normalized.length >= 2) {
+                requiredSkills.push(normalized);
               }
             });
           }
@@ -671,8 +703,8 @@ export function extractKeywordsFromJobDescription(jobDescription: string): JobDe
 
   return {
     text: jobDescription,
-    extractedKeywords: uniqueKeywords.slice(0, 30), // Increased limit
-    requiredSkills: requiredSkills.slice(0, 20),    // Increased limit
+    extractedKeywords: uniqueKeywords.slice(0, 40),
+    requiredSkills: requiredSkills.slice(0, 25),
     jobTitle,
     companyName
   };

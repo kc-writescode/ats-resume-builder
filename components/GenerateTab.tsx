@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { resumeTemplates } from '@/lib/templates';
 import { BaseResume } from '@/types/resume';
+import { extractKeywordsFromJobDescription } from '@/lib/ats-analyzer';
 
 interface GenerateTabProps {
   jobDescription: string;
@@ -14,51 +15,54 @@ interface GenerateTabProps {
   baseResume?: BaseResume | null;
 }
 
-// Simple ATS score calculation for preview
+// Calculate ATS score preview using the SAME extraction logic as the actual generation
 function calculatePreviewAtsScore(resume: BaseResume, jd: string) {
-  const jdLower = jd.toLowerCase();
   const resumeText = [
-    resume.summary,
+    resume.summary || '',
     ...resume.skills,
     ...resume.experience.map(e => `${e.title} ${e.company} ${e.bullets.join(' ')}`),
     ...resume.education.map(e => `${e.degree} ${e.institution}`),
-    ...(resume.certifications || [])
+    ...(resume.certifications || []),
+    ...(resume.coreCompetencies || []),
+    // Include skill categories
+    ...(resume.skillCategories?.flatMap(cat => cat.skills) || [])
   ].join(' ').toLowerCase();
 
-  // Extract keywords from JD
-  const keywordPatterns = [
-    /\b(javascript|typescript|python|java|react|node|angular|vue|sql|aws|azure|docker|kubernetes|git|api|rest|graphql|html|css|mongodb|postgresql|redis|linux|agile|scrum|ci\/cd|devops)\b/gi,
-    /\b(leadership|communication|teamwork|problem.solving|analytical|management|collaboration|strategic|innovative)\b/gi,
-    /\b(stakeholder|revenue|growth|optimization|implementation|development|analysis|reporting|project|budget)\b/gi
-  ];
-
-  const allJdKeywords: string[] = [];
-  keywordPatterns.forEach(pattern => {
-    const matches = jdLower.match(pattern) || [];
-    matches.forEach(m => {
-      const normalized = m.toLowerCase().replace(/[^a-z]/g, '');
-      if (!allJdKeywords.includes(normalized)) {
-        allJdKeywords.push(normalized);
-      }
-    });
-  });
+  // Use the SAME extraction function as the actual generation process
+  const jobDesc = extractKeywordsFromJobDescription(jd);
+  const allKeywords = [...new Set([...jobDesc.requiredSkills, ...jobDesc.extractedKeywords])];
 
   const matched: string[] = [];
   const missing: string[] = [];
 
-  allJdKeywords.slice(0, 15).forEach(keyword => {
-    if (resumeText.includes(keyword)) {
+  // Check the top keywords (prioritize required skills)
+  allKeywords.slice(0, 25).forEach(keyword => {
+    const keywordLower = keyword.toLowerCase();
+    if (resumeText.includes(keywordLower)) {
       matched.push(keyword);
     } else {
       missing.push(keyword);
     }
   });
 
+  // Calculate score using the same weighting as the full ATS analyzer
   const totalKeywords = matched.length + missing.length;
-  const matchPercentage = totalKeywords > 0 ? (matched.length / totalKeywords) * 100 : 0;
-  const baseScore = Math.min(35, resumeText.length / 50);
-  const keywordScore = matchPercentage * 0.65;
-  const finalScore = Math.min(100, Math.round(baseScore + keywordScore));
+  const matchRatio = totalKeywords > 0 ? matched.length / totalKeywords : 0;
+
+  // Weight required skills higher (first portion of keywords are required skills)
+  const requiredSkillsCount = Math.min(jobDesc.requiredSkills.length, 15);
+  const matchedRequired = matched.filter(m =>
+    jobDesc.requiredSkills.slice(0, 15).map(s => s.toLowerCase()).includes(m.toLowerCase())
+  ).length;
+  const requiredMatchRatio = requiredSkillsCount > 0 ? matchedRequired / requiredSkillsCount : 0;
+
+  // Score components (aligned with ats-analyzer.ts)
+  const keywordScore = (matchRatio * 0.4 + requiredMatchRatio * 0.6) * 60; // Up to 60 points for keywords
+  const contentScore = Math.min(20, resumeText.length / 150); // Up to 20 points for content
+  const structureBonus = (resume.coreCompetencies?.length || 0) >= 5 ? 10 : 5; // Bonus for competencies
+  const skillCatBonus = (resume.skillCategories?.length || 0) > 0 ? 5 : 0; // Bonus for categorized skills
+
+  const finalScore = Math.min(100, Math.round(keywordScore + contentScore + structureBonus + skillCatBonus));
 
   return { score: finalScore, matchedKeywords: matched, missingKeywords: missing };
 }
