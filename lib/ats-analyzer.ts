@@ -616,6 +616,9 @@ export function extractKeywordsFromJobDescription(jobDescription: string): JobDe
 
     // General Business Skills
     /\b(strategic\s*planning|business\s*strategy|stakeholder\s*management|cross[\s-]?functional|executive\s*presentations?|board\s*presentations?|budget\s*management|team\s*leadership|people\s*management|mentoring|coaching|negotiation|problem[\s-]?solving|decision[\s-]?making|communication|presentation|microsoft\s*office|excel|powerpoint|word|outlook)/gi,
+
+    // Soft Skills & Interpersonal Qualities
+    /\b(leadership|collaboration|teamwork|team\s*player|interpersonal\s*skills?|relationship\s*building|conflict\s*resolution|emotional\s*intelligence|adaptability|flexibility|resilience|critical\s*thinking|analytical\s*thinking|creative\s*thinking|innovation|creativity|attention\s*to\s*detail|detail[\s-]?oriented|organized|organizational\s*skills?|time\s*management|prioritization|multitasking|self[\s-]?motivated|self[\s-]?starter|proactive|initiative|accountability|ownership|integrity|professionalism|customer[\s-]?focused|client[\s-]?focused|results[\s-]?driven|goal[\s-]?oriented|fast[\s-]?paced|deadline[\s-]?driven|work\s*independently|independent\s*work|verbal\s*communication|written\s*communication|active\s*listening|empathy|patience|persuasion|influence|diplomacy|cultural\s*awareness|diversity\s*&?\s*inclusion)/gi,
   ];
 
   const extractedKeywords: string[] = [];

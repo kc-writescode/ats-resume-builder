@@ -84,6 +84,17 @@ If JD mentions "machine learning infrastructure":
 - Core Competencies = high-level concepts aligned with JD (Data Engineering, Machine Learning, Cloud Architecture, etc.)
 - ALWAYS use proper capitalization for acronyms: LLM, NLP, SQL, API, AWS, GCP, ETL, ML, AI, RAG, etc.
 
+**SOFT SKILLS INTEGRATION (CRITICAL FOR NON-TECH ROLES)**:
+- Extract soft skills mentioned in the JD (leadership, collaboration, communication, etc.)
+- Weave soft skills naturally into bullet points - show them through achievements, not just list them
+- EXAMPLES of soft skill integration:
+  - "Led cross-functional collaboration..." (shows leadership + collaboration)
+  - "Communicated complex technical concepts to stakeholders..." (shows communication)
+  - "Adapted quickly to changing priorities..." (shows adaptability)
+  - "Mentored 5 junior team members..." (shows leadership + mentoring)
+- Include 2-3 soft skills in the summary
+- Add a "Leadership & Soft Skills" or "Professional Skills" category if soft skills are heavily emphasized in the JD
+
 **OUTPUT FORMAT**:
 Return ONLY valid JSON:
 {
@@ -114,6 +125,48 @@ Return ONLY valid JSON:
 
 CRITICAL REMINDER: Your output will be REJECTED if bullet points are not substantially reframed to match the job description. Every bullet must demonstrate clear JD alignment with quantified impact.`;
 
+
+// Extract soft skills from job description text
+function extractSoftSkills(jobText: string): string[] {
+  const text = jobText.toLowerCase();
+  const softSkillPatterns = [
+    // Leadership & Management
+    /\b(leadership|team\s*lead|people\s*management|mentoring|coaching|delegation)\b/gi,
+    // Communication
+    /\b(communication\s*skills?|verbal\s*communication|written\s*communication|presentation\s*skills?|public\s*speaking|active\s*listening)\b/gi,
+    // Collaboration & Teamwork
+    /\b(collaboration|teamwork|team\s*player|cross[\s-]?functional|interpersonal\s*skills?|relationship\s*building|stakeholder\s*management)\b/gi,
+    // Problem Solving & Critical Thinking
+    /\b(problem[\s-]?solving|critical\s*thinking|analytical\s*thinking|strategic\s*thinking|decision[\s-]?making|troubleshooting)\b/gi,
+    // Adaptability & Flexibility
+    /\b(adaptability|flexibility|resilience|agility|fast[\s-]?paced|dynamic\s*environment|change\s*management)\b/gi,
+    // Work Ethic & Drive
+    /\b(self[\s-]?motivated|self[\s-]?starter|proactive|initiative|accountability|ownership|results[\s-]?driven|goal[\s-]?oriented|deadline[\s-]?driven)\b/gi,
+    // Organization & Time Management
+    /\b(organized|organizational\s*skills?|time\s*management|prioritization|multitasking|attention\s*to\s*detail|detail[\s-]?oriented)\b/gi,
+    // Interpersonal & EQ
+    /\b(empathy|emotional\s*intelligence|conflict\s*resolution|diplomacy|negotiation|influence|persuasion|customer[\s-]?focused|client[\s-]?focused)\b/gi,
+    // Innovation & Creativity
+    /\b(innovation|creativity|creative\s*thinking|continuous\s*improvement|growth\s*mindset)\b/gi,
+  ];
+
+  const foundSkills = new Set<string>();
+  softSkillPatterns.forEach(pattern => {
+    const matches = text.match(pattern);
+    if (matches) {
+      matches.forEach(match => {
+        // Capitalize first letter of each word
+        const normalized = match.trim().toLowerCase()
+          .split(/\s+/)
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ');
+        foundSkills.add(normalized);
+      });
+    }
+  });
+
+  return Array.from(foundSkills).slice(0, 10);
+}
 
 // Detect role type and return appropriate skill categories
 function detectRoleTypeAndCategories(jobTitle: string, jobText: string): string {
@@ -175,6 +228,9 @@ export async function generateTailoredResume(
   const allKeywords = [...new Set([...jobDescription.requiredSkills, ...jobDescription.extractedKeywords])];
   const keywordsToInclude = allKeywords.slice(0, 25);
 
+  // Extract soft skills from job description
+  const softSkills = extractSoftSkills(jobDescription.text);
+
   const userPrompt = `**BASE RESUME (ORIGINAL BULLETS - MUST BE TRANSFORMED):**
 ${JSON.stringify(baseResume, null, 2)}
 
@@ -191,11 +247,22 @@ ${jdPhrases.map((p, i) => `${i + 1}. "${p}"`).join('\n')}
 **CRITICAL: KEYWORDS THAT MUST APPEAR IN YOUR OUTPUT (ALL OF THESE):**
 ${keywordsToInclude.map((kw, i) => `${i + 1}. ${kw}`).join('\n')}
 
+**SOFT SKILLS FROM JD (MUST BE DEMONSTRATED IN BULLETS):**
+${softSkills.length > 0 ? softSkills.map((s, i) => `${i + 1}. ${s}`).join('\n') : 'None explicitly mentioned - infer from context'}
+
 **HOW TO INCLUDE EACH KEYWORD:**
-- In the SUMMARY: Include at least 3-4 of the top keywords
+- In the SUMMARY: Include at least 3-4 of the top keywords + 1-2 soft skills
 - In EXPERIENCE bullets: Each bullet should contain 1-2 keywords from the list above
 - In SKILLS array: Add ALL keywords that are skills/technologies/tools
 - In SKILL CATEGORIES: Organize the keywords into appropriate categories
+
+**SOFT SKILLS INTEGRATION (CRITICAL):**
+- Weave soft skills into bullet points naturally - SHOW them through achievements
+- GOOD: "Led cross-functional collaboration with 5 teams to deliver..." (shows leadership + collaboration)
+- GOOD: "Communicated complex findings to C-level stakeholders..." (shows communication)
+- BAD: "Strong communication skills" (just listing, not demonstrating)
+- Include 2-3 soft skills in the summary sentence
+- At least 30% of bullets should demonstrate a soft skill
 
 **TRANSFORMATION INSTRUCTIONS (CRITICAL - READ CAREFULLY):**
 
@@ -203,26 +270,30 @@ ${keywordsToInclude.map((kw, i) => `${i + 1}. ${kw}`).join('\n')}
    - You MUST rewrite every bullet point to use language from the job description
    - Do NOT return bullets that look similar to the original
    - Each bullet should incorporate at least one keyword from the JD
+   - Weave in soft skills naturally where applicable
 
 2. **EXAMPLE TRANSFORMATION FOR THIS JOB:**
    - If original says: "Built features for the product"
-   - JD mentions: "${jobDescription.requiredSkills[0] || 'key skill'}"
-   - Transform to: "Developed ${jobDescription.requiredSkills[0] || 'key skill'}-focused features that drove measurable business impact"
+   - JD mentions: "${jobDescription.requiredSkills[0] || 'key skill'}" + collaboration
+   - Transform to: "Collaborated with cross-functional teams to develop ${jobDescription.requiredSkills[0] || 'key skill'}-focused features that drove measurable business impact"
 
 3. **SKILLS SECTION - CRITICAL:**
    - Add ALL of these keywords to the skills array: ${keywordsToInclude.slice(0, 15).join(', ')}
    - Include the base resume skills AND add new JD-relevant skills
    - Organize into categories: ${skillCategories}
+   ${softSkills.length > 0 ? `- Add a "Leadership & Soft Skills" category with: ${softSkills.slice(0, 5).join(', ')}` : ''}
 
 4. **SUMMARY**: Create a compelling summary for a "${jobDescription.jobTitle}" at ${jobDescription.companyName || 'this company'}
    - MUST include these keywords: ${keywordsToInclude.slice(0, 5).join(', ')}
+   - MUST mention 1-2 soft skills: ${softSkills.slice(0, 3).join(', ') || 'leadership, collaboration'}
 
-5. **KEYWORD TRACKING**: Provide 10-15 keyword insights showing exactly where you placed each keyword
+5. **KEYWORD TRACKING**: Provide 10-15 keyword insights showing exactly where you placed each keyword (including soft skills)
 
 **FINAL WARNING**: Your response will be REJECTED if:
 - Bullet points are not substantially reframed to match the job description
 - Required keywords are not included in the output
 - Skills section doesn't include JD-relevant terms
+- Soft skills are not demonstrated in at least 3 bullets
 
 **OUTPUT SIZE WARNING**: Keep bullets concise (80-120 chars each). Do not be overly verbose. Complete the FULL JSON response.`;
 
@@ -481,6 +552,9 @@ export async function generateTailoredResumeStreaming(
   const allKeywords = [...new Set([...jobDescription.requiredSkills, ...jobDescription.extractedKeywords])];
   const keywordsToInclude = allKeywords.slice(0, 25);
 
+  // Extract soft skills from job description
+  const softSkills = extractSoftSkills(jobDescription.text);
+
   const userPrompt = `**BASE RESUME (ORIGINAL BULLETS - MUST BE TRANSFORMED):**
 ${JSON.stringify(baseResume, null, 2)}
 
@@ -497,11 +571,22 @@ ${jdPhrases.map((p, i) => `${i + 1}. "${p}"`).join('\n')}
 **CRITICAL: KEYWORDS THAT MUST APPEAR IN YOUR OUTPUT (ALL OF THESE):**
 ${keywordsToInclude.map((kw, i) => `${i + 1}. ${kw}`).join('\n')}
 
+**SOFT SKILLS FROM JD (MUST BE DEMONSTRATED IN BULLETS):**
+${softSkills.length > 0 ? softSkills.map((s, i) => `${i + 1}. ${s}`).join('\n') : 'None explicitly mentioned - infer from context'}
+
 **HOW TO INCLUDE EACH KEYWORD:**
-- In the SUMMARY: Include at least 3-4 of the top keywords
+- In the SUMMARY: Include at least 3-4 of the top keywords + 1-2 soft skills
 - In EXPERIENCE bullets: Each bullet should contain 1-2 keywords from the list above
 - In SKILLS array: Add ALL keywords that are skills/technologies/tools
 - In SKILL CATEGORIES: Organize the keywords into appropriate categories
+
+**SOFT SKILLS INTEGRATION (CRITICAL):**
+- Weave soft skills into bullet points naturally - SHOW them through achievements
+- GOOD: "Led cross-functional collaboration with 5 teams to deliver..." (shows leadership + collaboration)
+- GOOD: "Communicated complex findings to C-level stakeholders..." (shows communication)
+- BAD: "Strong communication skills" (just listing, not demonstrating)
+- Include 2-3 soft skills in the summary sentence
+- At least 30% of bullets should demonstrate a soft skill
 
 **TRANSFORMATION INSTRUCTIONS (CRITICAL - READ CAREFULLY):**
 
@@ -509,26 +594,30 @@ ${keywordsToInclude.map((kw, i) => `${i + 1}. ${kw}`).join('\n')}
    - You MUST rewrite every bullet point to use language from the job description
    - Do NOT return bullets that look similar to the original
    - Each bullet should incorporate at least one keyword from the JD
+   - Weave in soft skills naturally where applicable
 
 2. **EXAMPLE TRANSFORMATION FOR THIS JOB:**
    - If original says: "Built features for the product"
-   - JD mentions: "${jobDescription.requiredSkills[0] || 'key skill'}"
-   - Transform to: "Developed ${jobDescription.requiredSkills[0] || 'key skill'}-focused features that drove measurable business impact"
+   - JD mentions: "${jobDescription.requiredSkills[0] || 'key skill'}" + collaboration
+   - Transform to: "Collaborated with cross-functional teams to develop ${jobDescription.requiredSkills[0] || 'key skill'}-focused features that drove measurable business impact"
 
 3. **SKILLS SECTION - CRITICAL:**
    - Add ALL of these keywords to the skills array: ${keywordsToInclude.slice(0, 15).join(', ')}
    - Include the base resume skills AND add new JD-relevant skills
    - Organize into categories: ${skillCategories}
+   ${softSkills.length > 0 ? `- Add a "Leadership & Soft Skills" category with: ${softSkills.slice(0, 5).join(', ')}` : ''}
 
 4. **SUMMARY**: Create a compelling summary for a "${jobDescription.jobTitle}" at ${jobDescription.companyName || 'this company'}
    - MUST include these keywords: ${keywordsToInclude.slice(0, 5).join(', ')}
+   - MUST mention 1-2 soft skills: ${softSkills.slice(0, 3).join(', ') || 'leadership, collaboration'}
 
-5. **KEYWORD TRACKING**: Provide 10-15 keyword insights showing exactly where you placed each keyword
+5. **KEYWORD TRACKING**: Provide 10-15 keyword insights showing exactly where you placed each keyword (including soft skills)
 
 **FINAL WARNING**: Your response will be REJECTED if:
 - Bullet points are not substantially reframed to match the job description
 - Required keywords are not included in the output
 - Skills section doesn't include JD-relevant terms
+- Soft skills are not demonstrated in at least 3 bullets
 
 **OUTPUT SIZE WARNING**: Keep bullets concise (80-120 chars each). Do not be overly verbose. Complete the FULL JSON response.`;
 
