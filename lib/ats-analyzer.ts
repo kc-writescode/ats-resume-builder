@@ -28,19 +28,20 @@ export function analyzeKeywords(
     !resumeText.includes(kw.toLowerCase())
   );
 
-  // Filter out years of experience patterns and other non-skill phrases
+  // Filter out non-skill phrases - only keep genuine technical/professional competencies
   const isValidCompetency = (kw: string) => {
-    const lower = kw.toLowerCase();
+    const lower = kw.toLowerCase().trim();
     // Filter out years of experience, numbers, and generic phrases
     if (/\d+\s*(years?|yrs?|\+)/.test(lower)) return false;
     if (/years?\s*(of\s*)?(experience|exp)/.test(lower)) return false;
     if (/experience\s*(with|in|required)?/.test(lower)) return false;
-    if (/^\d+$/.test(kw.trim())) return false;
-    if (lower.length < 3) return false;
-    if (/^(the|and|or|for|with|from|into|this|that|have|has|will|can|may|must|should)$/i.test(kw.trim())) return false;
-    // Filter soft skills and generic terms
-    if (/^(communication|leadership|teamwork|collaborat|problem|analysis|thinking|creative|flexible|time|detail|self|motivated|hard|soft|skill)/i.test(lower)) return false;
-    if (lower === 'development' || lower === 'programming' || lower === 'coding' || lower === 'software') return false;
+    if (/^\d+$/.test(lower)) return false;
+    if (lower.length < 4) return false; // No 2-3 char fragments as competencies
+    if (/^(the|and|or|for|with|from|into|this|that|have|has|will|can|may|must|should)$/i.test(lower)) return false;
+    // Filter soft skills and generic terms - these are NOT core competencies
+    if (/^(communication|leadership|teamwork|collaborat|problem|analysis|thinking|creative|flexible|time|detail|self|motivated|hard|soft|skill|innovation|creativity|adaptability|resilience|integrity|professionalism|accountability|ownership|initiative|proactive|organized|mentoring|coaching|negotiation|presentation|influence|persuasion|diplomacy|empathy|patience)/i.test(lower)) return false;
+    // Filter generic tools and vague terms
+    if (['development', 'programming', 'coding', 'software', 'excel', 'word', 'powerpoint', 'outlook', 'manufacturing', 'automation', 'safety', 'maintenance', 'reliability', 'environmental', 'diversity', 'inclusion', 'procurement', 'logistics', 'operations', 'compensation', 'qualification', 'recruiting', 'benefits'].includes(lower)) return false;
     return true;
   };
 
@@ -726,8 +727,22 @@ export function extractKeywordsFromJobDescription(jobDescription: string): JobDe
   const isValidKeyword = (kw: string): boolean => {
     const lower = kw.toLowerCase().trim();
 
-    // Too short or too long
-    if (lower.length < 2 || lower.length > 40) return false;
+    // Too long
+    if (lower.length > 40) return false;
+
+    // Known valid short acronyms (2-3 chars) - whitelist approach
+    const validShortAcronyms = new Set([
+      'sql', 'aws', 'gcp', 'etl', 'api', 'ml', 'ai', 'nlp', 'rag', 'ci',
+      'cd', 'css', 'php', 'seo', 'sem', 'ppc', 'crm', 'erp', 'sap', 'rpa',
+      'fda', 'ema', 'ich', 'gxp', 'gmp', 'gcp', 'glp', 'cmc', 'ctd', 'pma',
+      'nda', 'bla', 'ind', 'sop', 'cad', 'plc', 'sox', 'cpa', 'cfa', 'pmp',
+      'kyc', 'aml', 'roi', 'eoe', 'tga', 'mdr', 'usd', 'iso'
+    ]);
+
+    // Short single words (< 4 chars) must be known acronyms
+    if (lower.length < 4 && !lower.includes(' ')) {
+      if (!validShortAcronyms.has(lower)) return false;
+    }
 
     // Contains garbage indicator words (sentence fragments, not skills)
     const garbageWords = [
@@ -738,13 +753,13 @@ export function extractKeywordsFromJobDescription(jobDescription: string): JobDe
       'expect', 'offer', 'provide', 'looking', 'seeking', 'hiring',
       'company', 'corporation', 'inc', 'llc', 'corp',
       'background', 'qualifications', 'requirements', 'responsibilities',
-      'bachelor', 'master', 'degree', 'education', 'university', 'college',
-      'paragon', 'biomet', 'zimmer'  // Company-specific terms from JD
+      'bachelor', 'master', 'degree', 'education', 'university', 'college'
     ];
     if (garbageWords.some(g => lower.includes(g))) return false;
 
-    // HR/Business buzzwords that are NOT skills (recruiters spot these as AI-generated)
-    const buzzwordBlacklist = [
+    // Generic single-word terms that are NOT useful skills/keywords
+    const genericBlacklist = new Set([
+      // HR/Business buzzwords
       'qualification', 'compensation', 'benefits', 'salary',
       'recruiting', 'recruitment', 'onboarding', 'retention',
       'logistics', 'operations', 'duties', 'tasks',
@@ -753,13 +768,26 @@ export function extractKeywordsFromJobDescription(jobDescription: string): JobDe
       'team', 'teams', 'department', 'organization', 'workplace',
       'performance', 'reviews', 'feedback', 'goals', 'objectives',
       'travel', 'remote', 'hybrid', 'onsite', 'location',
-      'candidate', 'applicant', 'employee', 'employer', 'staff'
-    ];
-    if (buzzwordBlacklist.includes(lower)) return false;
+      'candidate', 'applicant', 'employee', 'employer', 'staff',
+      // Generic soft skills / vague words NOT useful as standalone keywords
+      'innovation', 'creativity', 'leadership', 'collaboration',
+      'teamwork', 'communication', 'presentation', 'negotiation',
+      'mentoring', 'coaching', 'flexibility', 'adaptability',
+      'resilience', 'integrity', 'professionalism', 'accountability',
+      'ownership', 'initiative', 'proactive', 'organized',
+      'prioritization', 'multitasking', 'patience', 'empathy',
+      'persuasion', 'influence', 'diplomacy',
+      // Generic tools that aren't differentiating skills
+      'excel', 'word', 'powerpoint', 'outlook',
+      // Generic terms
+      'manufacturing', 'automation', 'safety', 'maintenance',
+      'reliability', 'environmental', 'diversity', 'inclusion',
+      'procurement'
+    ]);
+    if (genericBlacklist.has(lower)) return false;
 
     // Is a job title pattern (contains specialist, manager, etc.)
     if (/\b(specialist|manager|director|coordinator|analyst|engineer|lead|officer|associate|consultant|administrator)\b/i.test(lower)) {
-      // But allow if it's a skill area like "project manager" methodology
       if (!/^(project management|change management|risk management|data management)$/i.test(lower)) {
         return false;
       }
@@ -785,8 +813,8 @@ export function extractKeywordsFromJobDescription(jobDescription: string): JobDe
 
   return {
     text: jobDescription,
-    extractedKeywords: uniqueKeywords.slice(0, 40),
-    requiredSkills: cleanedRequiredSkills.slice(0, 25),
+    extractedKeywords: uniqueKeywords.slice(0, 25),
+    requiredSkills: cleanedRequiredSkills.slice(0, 15),
     jobTitle,
     companyName
   };

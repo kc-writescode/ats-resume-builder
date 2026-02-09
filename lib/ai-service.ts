@@ -68,11 +68,13 @@ If JD mentions "cross-functional collaboration":
 - Mention 1-2 quantified achievements
 - Length: 150-250 characters (2-3 sentences)
 
-**SKILLS & CORE COMPETENCIES**:
-- Core Competencies = ONLY genuine technical/professional skills the candidate has
-- Include skills from base resume plus RELEVANT JD skills the candidate likely possesses
-- NEVER include HR buzzwords: qualification, compensation, benefits, recruiting, logistics, operations, onboarding, retention, environment, culture, opportunity, growth, team, department, organization, performance, travel, remote
-- These are JD context words, NOT candidate skills. Recruiters spot this instantly
+**SKILLS & CORE COMPETENCIES (CRITICAL - RECRUITER RED FLAG AREA)**:
+- Core Competencies = ONLY genuine technical/professional skills the candidate actually has
+- Each competency must be a SPECIFIC, CONCRETE skill - not a vague word
+- GOOD core competencies: "Regulatory Strategy", "510(k) Submissions", "Machine Learning", "Data Pipeline Architecture", "Financial Modeling"
+- BAD core competencies (NEVER use these - recruiters instantly flag as AI): "Innovation", "Excel", "Word", "Qualification", "Compensation", "Recruiting", "Logistics", "Operations", "Manufacturing", "Automation", "Safety", "Leadership", "Communication", "Teamwork", "Collaboration"
+- If a word could describe anyone in any job, it is NOT a core competency
+- Maximum 8-10 core competencies, all must be role-specific
 - ALWAYS use proper capitalization for acronyms: LLM, NLP, SQL, API, AWS, GCP, ETL, ML, AI, RAG, etc.
 
 **SOFT SKILLS INTEGRATION**:
