@@ -41,10 +41,22 @@ Pick the most relevant metric type for each bullet - at least ONE must appear:
 - Savings: "saving $500K annually", "reduced costs by 30%", "eliminated 20 hrs/week manual work"
 - Team: "led team of 6", "mentored 4 junior engineers", "coordinated with 3 vendors"
 
-If the original bullet has NO numbers, INFER reasonable metrics from context:
-- "Managed client accounts" → "Managed portfolio of 15+ enterprise client accounts generating $3M+ ARR"
-- "Wrote test cases" → "Authored 200+ automated test cases, improving code coverage from 60% to 92%"
-- "Handled regulatory submissions" → "Prepared 12+ regulatory submissions to FDA, achieving first-cycle approval for 3 products"
+**REALISTIC METRICS RULES (CRITICAL - RECRUITERS WILL VERIFY)**:
+When inferring metrics, they MUST be plausible for the candidate's level and role:
+- Junior/Mid roles (0-5 yrs): teams of 2-5, budgets $50K-$500K, improvements 10-30%, 5-20 projects
+- Senior roles (5-10 yrs): teams of 5-15, budgets $500K-$5M, improvements 20-50%, 10-50 projects
+- Director+ (10+ yrs): teams of 15-50+, budgets $5M+, revenue impact $1M+
+- NEVER claim: >90% improvement (unless very specific), >$10M savings for non-exec roles, 99.9% accuracy (unless systems/SRE), "millions of users" for small companies
+- Use RANGES and approximations to sound authentic: "15-20 reports" not "47 reports", "~30%" not "31.7%"
+- Use "+" suffix for estimates: "200+ test cases", "$3M+ portfolio", "50+ stakeholders"
+- If the candidate's original bullet has a specific metric, KEEP IT - don't inflate or change it
+- Match metrics to company size: startup metrics differ from Fortune 500 metrics
+- Round numbers feel more honest: "reduced by 25%" > "reduced by 27.3%"
+
+If the original bullet has NO numbers, add CONSERVATIVE, believable scope:
+- "Managed client accounts" → "Managed portfolio of 15+ client accounts across 3 verticals"
+- "Wrote test cases" → "Authored 200+ automated test cases, improving code coverage from 65% to 88%"
+- "Handled regulatory submissions" → "Prepared 10+ regulatory submissions to FDA, supporting 2 successful product approvals"
 
 NEVER leave a bullet as just a task description. Even project bullets need outcomes.
 
@@ -256,9 +268,71 @@ function extractSoftSkills(jobText: string): string[] {
 function detectRoleTypeAndCategories(jobTitle: string, jobText: string): string {
   const combined = (jobTitle + ' ' + jobText).toLowerCase();
 
-  // AI/ML Role
-  if (/ml|machine learning|artificial intelligence|generative ai|llm|data science|deep learning|neural network/i.test(combined)) {
-    return "'Programming Languages', 'Machine Learning & AI', 'Data Engineering', 'Cloud Platforms', 'Tools & Frameworks'";
+  // GenAI / LLM Role
+  if (/generative ai|llm|large language model|gpt|prompt engineering|rag|retrieval augmented|langchain|vector database|fine[\s-]?tun/i.test(combined)) {
+    return "'LLM & GenAI', 'Programming Languages', 'Cloud & Infrastructure', 'Data & Vector Stores', 'MLOps & Deployment'";
+  }
+
+  // NLP Role
+  if (/nlp|natural language|text mining|sentiment analysis|named entity|text classification|transformer|bert|spacy|hugging\s*face/i.test(combined)) {
+    return "'NLP & Text Processing', 'ML Frameworks', 'Programming Languages', 'Cloud Platforms', 'Data Engineering'";
+  }
+
+  // Computer Vision Role
+  if (/computer vision|image recognition|object detection|image segmentation|opencv|yolo|cnn|convolutional|image processing/i.test(combined)) {
+    return "'Computer Vision', 'Deep Learning Frameworks', 'Programming Languages', 'Cloud & GPU Infrastructure', 'Data Processing'";
+  }
+
+  // MLOps / ML Engineering Role
+  if (/mlops|ml engineer|model deployment|model serving|feature store|ml pipeline|kubeflow|mlflow|sagemaker|vertex ai/i.test(combined)) {
+    return "'MLOps & Pipelines', 'Cloud Platforms', 'Programming Languages', 'Containerization & Orchestration', 'Monitoring & Observability'";
+  }
+
+  // Data Science / ML Role (general)
+  if (/ml|machine learning|artificial intelligence|data science|deep learning|neural network|predictive model/i.test(combined)) {
+    return "'Machine Learning & AI', 'Programming Languages', 'Data Engineering', 'Cloud Platforms', 'Tools & Frameworks'";
+  }
+
+  // Data Engineering Role
+  if (/data engineer|etl|data pipeline|data warehouse|spark|airflow|kafka|dbt|snowflake|redshift|bigquery|data lake/i.test(combined)) {
+    return "'Data Pipeline & ETL', 'Databases & Warehouses', 'Programming Languages', 'Cloud Platforms', 'Orchestration & Tools'";
+  }
+
+  // Data Analyst / BI Role
+  if (/data analyst|business intelligence|tableau|power bi|looker|sql analyst|reporting|dashboard|analytics engineer/i.test(combined)) {
+    return "'Analytics & Reporting', 'SQL & Databases', 'Visualization Tools', 'Programming & Scripting', 'Domain Knowledge'";
+  }
+
+  // DevOps / SRE / Platform Engineering
+  if (/devops|sre|site reliability|platform engineer|infrastructure|terraform|ansible|ci[\s\/]?cd|jenkins|github actions|kubernetes|docker/i.test(combined)) {
+    return "'Infrastructure & Cloud', 'CI/CD & Automation', 'Containerization & Orchestration', 'Monitoring & Observability', 'Programming & Scripting'";
+  }
+
+  // Frontend Engineering
+  if (/frontend|front[\s-]?end|react|angular|vue|next\.?js|typescript|css|tailwind|ui engineer|web developer/i.test(combined) &&
+      !/backend|full[\s-]?stack/i.test(combined)) {
+    return "'Frontend Frameworks', 'Languages & Styling', 'Testing & Build Tools', 'State Management', 'Performance & Accessibility'";
+  }
+
+  // Backend Engineering
+  if (/backend|back[\s-]?end|api|microservices|node\.?js|django|flask|spring|golang|rust|server[\s-]?side/i.test(combined) &&
+      !/frontend|full[\s-]?stack/i.test(combined)) {
+    return "'Backend Frameworks', 'Programming Languages', 'Databases', 'Cloud & Infrastructure', 'API Design & Architecture'";
+  }
+
+  // Fullstack Engineering
+  if (/full[\s-]?stack|fullstack/i.test(combined)) {
+    return "'Frontend', 'Backend', 'Databases', 'Cloud & DevOps', 'Tools & Testing'";
+  }
+
+  // Cybersecurity Role
+  if (/cybersecurity|security engineer|penetration|soc|siem|threat|vulnerability|incident response|compliance|iso 27001|nist/i.test(combined)) {
+    return "'Security Operations', 'Compliance & Frameworks', 'Tools & Platforms', 'Programming & Scripting', 'Cloud Security'";
+  }
+
+  // Product Management
+  if (/product manager|product owner|product management|roadmap|user stories|stakeholder|backlog|a\/b test/i.test(combined)) {
+    return "'Product Strategy', 'Analytics & Metrics', 'Tools & Platforms', 'Technical Knowledge', 'Stakeholder Management'";
   }
 
   // Pharmaceutical/Regulatory/Healthcare Role
@@ -291,8 +365,13 @@ function detectRoleTypeAndCategories(jobTitle: string, jobText: string): string 
     return "'Project Management', 'Process Improvement', 'Operations', 'Tools & Systems', 'Leadership'";
   }
 
-  // Default: General Tech/Business
-  return "'Technical Skills', 'Tools & Platforms', 'Methodologies', 'Industry Knowledge', 'Soft Skills'";
+  // General Software Engineering (catch-all for tech roles)
+  if (/software engineer|developer|programmer|coding|development|engineering/i.test(combined)) {
+    return "'Programming Languages', 'Frameworks & Libraries', 'Databases', 'Cloud & Infrastructure', 'Tools & Practices'";
+  }
+
+  // Default: General Business
+  return "'Technical Skills', 'Tools & Platforms', 'Methodologies', 'Industry Knowledge', 'Professional Skills'";
 }
 
 export async function generateTailoredResume(
