@@ -649,35 +649,9 @@ export function extractKeywordsFromJobDescription(jobDescription: string): JobDe
     }
   });
 
-  // Extract important multi-word phrases (Title Case phrases often indicate key terms)
-  // BUT filter out garbage phrases that aren't actual skills/keywords
-  const titleCasePhrases = originalText.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+\b/g) || [];
-
-  // Words that indicate a phrase is NOT a keyword (sentence fragments, company names, etc.)
-  const garbageIndicators = [
-    'what', 'how', 'why', 'when', 'where', 'who', 'which',
-    'you', 'your', 'our', 'their', 'the', 'this', 'that',
-    'will', 'can', 'may', 'should', 'would', 'could',
-    'about', 'company', 'position', 'role', 'job', 'candidate',
-    'expect', 'offer', 'provide', 'looking', 'seeking', 'hiring',
-    'background', 'qualifications', 'requirements', 'responsibilities',
-    'bachelor', 'master', 'degree', 'education', 'university', 'college'
-  ];
-
-  titleCasePhrases.forEach(phrase => {
-    const normalized = phrase.toLowerCase();
-    const words = normalized.split(' ');
-
-    // Skip if too short, too long, or contains garbage indicators
-    if (normalized.length <= 5 || words.length > 3) return;
-    if (words.some(w => garbageIndicators.includes(w))) return;
-    if (extractedKeywords.includes(normalized)) return;
-
-    // Skip if it looks like a job title (contains specialist, manager, engineer, etc. at end)
-    if (/\b(specialist|manager|director|coordinator|analyst|engineer|lead|officer|associate|consultant|sr|junior|senior)$/i.test(normalized)) return;
-
-    extractedKeywords.push(normalized);
-  });
+  // NOTE: Title Case phrase extraction was removed - it caught too much garbage
+  // (city names, model names, sentence fragments like "San Francisco", "Claude Sonnet", "Role As")
+  // The skill patterns above already cover all meaningful industry-specific terms
 
   // Extract required skills from requirements sections
   const requiredSkills: string[] = [];
