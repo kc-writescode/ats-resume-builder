@@ -81,8 +81,13 @@ If JD mentions "machine learning infrastructure":
 **SKILLS & CORE COMPETENCIES**:
 - Follow the specified categorization exactly
 - Include ALL skills from base resume plus relevant JD skills
-- Core Competencies = high-level concepts aligned with JD (Data Engineering, Machine Learning, Cloud Architecture, etc.)
+- Core Competencies = high-level TECHNICAL concepts aligned with JD (Data Engineering, Machine Learning, Cloud Architecture, etc.)
 - ALWAYS use proper capitalization for acronyms: LLM, NLP, SQL, API, AWS, GCP, ETL, ML, AI, RAG, etc.
+- NEVER include these HR buzzwords in Core Competencies (recruiters will immediately spot as AI-generated):
+  - qualification, compensation, benefits, recruiting, logistics, operations
+  - onboarding, retention, environment, culture, opportunity, growth
+  - team, department, organization, performance, travel, remote
+  - These are JD context words, NOT skills the candidate possesses
 
 **SOFT SKILLS INTEGRATION (CRITICAL FOR NON-TECH ROLES)**:
 - Extract soft skills mentioned in the JD (leadership, collaboration, communication, etc.)

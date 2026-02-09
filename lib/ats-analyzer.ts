@@ -743,6 +743,20 @@ export function extractKeywordsFromJobDescription(jobDescription: string): JobDe
     ];
     if (garbageWords.some(g => lower.includes(g))) return false;
 
+    // HR/Business buzzwords that are NOT skills (recruiters spot these as AI-generated)
+    const buzzwordBlacklist = [
+      'qualification', 'compensation', 'benefits', 'salary',
+      'recruiting', 'recruitment', 'onboarding', 'retention',
+      'logistics', 'operations', 'duties', 'tasks',
+      'environment', 'culture', 'values', 'mission', 'vision',
+      'opportunity', 'opportunities', 'growth', 'career', 'position',
+      'team', 'teams', 'department', 'organization', 'workplace',
+      'performance', 'reviews', 'feedback', 'goals', 'objectives',
+      'travel', 'remote', 'hybrid', 'onsite', 'location',
+      'candidate', 'applicant', 'employee', 'employer', 'staff'
+    ];
+    if (buzzwordBlacklist.includes(lower)) return false;
+
     // Is a job title pattern (contains specialist, manager, etc.)
     if (/\b(specialist|manager|director|coordinator|analyst|engineer|lead|officer|associate|consultant|administrator)\b/i.test(lower)) {
       // But allow if it's a skill area like "project manager" methodology
