@@ -732,8 +732,20 @@ export function extractKeywordsFromJobDescription(jobDescription: string): JobDe
     /\b(python|java|javascript|typescript|c\+\+|c#|go|golang|rust|scala|kotlin|ruby|php|swift|r\b|matlab|perl|shell|bash|powershell)(?:\s*3)?/gi,
     // Technology - Frontend/Backend/Cloud
     /\b(react|angular|vue\.?js|next\.?js|node\.?js|express|django|flask|spring|aws|azure|gcp|docker|kubernetes|sql|mysql|postgresql|mongodb|redis|graphql|rest\s*api|microservices|serverless|terraform|ci\/cd|jenkins|git)(?:\.?js)?/gi,
-    // Data & Analytics
-    /\b(etl|data\s*pipeline|airflow|spark|kafka|tableau|power\s*bi|looker|analytics|business\s*intelligence|data\s*warehouse|snowflake|bigquery|machine\s*learning|deep\s*learning|nlp|tensorflow|pytorch)(?:\s*model)?/gi,
+    // ML & AI - Frameworks & Libraries
+    /\b(tensorflow|pytorch|keras|scikit[\s-]?learn|xgboost|lightgbm|catboost|jax|hugging\s*face|transformers|spacy|nltk|opencv|pandas|numpy|scipy|matplotlib|seaborn|plotly|mlflow|wandb|weights\s*&?\s*biases|dvc|ray|dask|rapids|onnx|triton)(?:\s*\d)?/gi,
+    // ML & AI - Concepts & Techniques
+    /\b(machine\s*learning|deep\s*learning|reinforcement\s*learning|supervised\s*learning|unsupervised\s*learning|transfer\s*learning|few[\s-]?shot\s*learning|federated\s*learning|neural\s*network|convolutional\s*neural|recurrent\s*neural|generative\s*adversarial|attention\s*mechanism|feature\s*engineering|feature\s*store|hyperparameter\s*tuning|model\s*evaluation|cross[\s-]?validation|gradient\s*descent|backpropagation|regularization|dimensionality\s*reduction|ensemble\s*methods?|random\s*forest|decision\s*tree|support\s*vector|logistic\s*regression|linear\s*regression|clustering|classification|regression|anomaly\s*detection|time\s*series|forecasting)/gi,
+    // GenAI & LLM
+    /\b(llm|large\s*language\s*model|generative\s*ai|gen\s*ai|gpt|chatgpt|claude|gemini|llama|mistral|prompt\s*engineering|fine[\s-]?tuning|rlhf|lora|qlora|peft|rag|retrieval[\s-]?augmented|langchain|llamaindex|vector\s*database|vector\s*store|pinecone|weaviate|chromadb|milvus|faiss|embedding|tokenization|attention|transformer|chain[\s-]?of[\s-]?thought|agent|multi[\s-]?modal|diffusion\s*model|stable\s*diffusion)/gi,
+    // NLP
+    /\b(natural\s*language\s*processing|nlp|text\s*mining|text\s*classification|sentiment\s*analysis|named\s*entity\s*recognition|ner|pos\s*tagging|dependency\s*parsing|word\s*embeddings?|word2vec|glove|bert|roberta|gpt[\s-]?\d|t5|seq2seq|language\s*model|text\s*generation|text\s*summarization|machine\s*translation|question\s*answering|information\s*extraction|information\s*retrieval|topic\s*modeling|lda|speech\s*recognition|asr|tts|text[\s-]?to[\s-]?speech)/gi,
+    // Computer Vision
+    /\b(computer\s*vision|image\s*recognition|object\s*detection|image\s*segmentation|semantic\s*segmentation|instance\s*segmentation|image\s*classification|face\s*recognition|facial\s*recognition|pose\s*estimation|optical\s*character|ocr|yolo|resnet|vgg|efficientnet|unet|gan|style\s*transfer|image\s*generation|video\s*analysis|3d\s*vision|point\s*cloud|lidar|depth\s*estimation)/gi,
+    // MLOps & Model Deployment
+    /\b(mlops|model\s*deployment|model\s*serving|model\s*monitoring|model\s*registry|feature\s*store|ml\s*pipeline|data\s*pipeline|sagemaker|vertex\s*ai|azure\s*ml|databricks|kubeflow|airflow|prefect|dagster|bentoml|seldon|kserve|torchserve|tensorflow\s*serving|model\s*drift|a\/b\s*testing|canary\s*deployment|model\s*versioning|experiment\s*tracking|ci\/cd\s*for\s*ml)/gi,
+    // Data Engineering & Analytics
+    /\b(etl|data\s*pipeline|spark|kafka|flink|airflow|tableau|power\s*bi|looker|analytics|business\s*intelligence|data\s*warehouse|snowflake|bigquery|redshift|databricks|delta\s*lake|data\s*lake|data\s*mesh|data\s*governance|data\s*quality|data\s*catalog|dbt|fivetran|data\s*modeling|star\s*schema|data\s*ingestion|batch\s*processing|stream\s*processing|real[\s-]?time\s*data)/gi,
 
     // Healthcare & Pharma & Regulatory
     /\b(fda|ema|ich|gxp|gmp|gcp|glp|regulatory\s*affairs|clinical\s*trials?|ind|nda|bla|anda|510\(k\)|pma|cmc|ctd|ectd|regulatory\s*submissions?|drug\s*safety|pharmacovigilance|adverse\s*events?|medical\s*devices?|biologics?|pharmaceuticals?|qms|quality\s*management|capa|deviation|validation|qualification|sop|standard\s*operating|audit|inspection|labeling|post[\s-]?market|pre[\s-]?market|clinical\s*development|clinical\s*operations|medical\s*writing|regulatory\s*strategy|health\s*authorities?|dossier|module\s*[1-5])/gi,
@@ -848,7 +860,10 @@ export function extractKeywordsFromJobDescription(jobDescription: string): JobDe
       'cd', 'css', 'php', 'seo', 'sem', 'ppc', 'crm', 'erp', 'sap', 'rpa',
       'fda', 'ema', 'ich', 'gxp', 'gmp', 'gcp', 'glp', 'cmc', 'ctd', 'pma',
       'nda', 'bla', 'ind', 'sop', 'cad', 'plc', 'sox', 'cpa', 'cfa', 'pmp',
-      'kyc', 'aml', 'roi', 'eoe', 'tga', 'mdr', 'usd', 'iso'
+      'kyc', 'aml', 'roi', 'eoe', 'tga', 'mdr', 'usd', 'iso',
+      // ML/AI specific
+      'cnn', 'rnn', 'gan', 'vgg', 'dnn', 'gpt', 'llm', 'ner', 'asr', 'tts',
+      'ocr', 'lda', 'dvc', 'jax', 'r', 'dbt', 'sre'
     ]);
 
     // Short single words (< 4 chars) must be known acronyms

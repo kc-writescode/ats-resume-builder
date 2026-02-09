@@ -269,33 +269,45 @@ function detectRoleTypeAndCategories(jobTitle: string, jobText: string): string 
   const combined = (jobTitle + ' ' + jobText).toLowerCase();
 
   // GenAI / LLM Role
-  if (/generative ai|llm|large language model|gpt|prompt engineering|rag|retrieval augmented|langchain|vector database|fine[\s-]?tun/i.test(combined)) {
-    return "'LLM & GenAI', 'Programming Languages', 'Cloud & Infrastructure', 'Data & Vector Stores', 'MLOps & Deployment'";
+  if (/generative ai|llm|large language model|gpt|prompt engineering|rag|retrieval augmented|langchain|llamaindex|vector database|fine[\s-]?tun|rlhf|lora|embedding/i.test(combined)) {
+    // Sub-detect based on JD content
+    const hasMLOps = /deploy|serving|pipeline|mlops|production|kubernetes|docker/i.test(combined);
+    const hasNLP = /nlp|natural language|text|sentiment|ner|classification/i.test(combined);
+    if (hasMLOps) return "'LLM & GenAI', 'MLOps & Model Serving', 'Programming Languages', 'Cloud & Infrastructure', 'Vector Databases & Data Stores'";
+    if (hasNLP) return "'LLM & GenAI', 'NLP & Text Processing', 'Programming Languages', 'ML Frameworks & Libraries', 'Cloud & Infrastructure'";
+    return "'LLM & GenAI', 'ML Frameworks & Libraries', 'Programming Languages', 'Vector Databases & Data Stores', 'Cloud & Infrastructure'";
   }
 
   // NLP Role
-  if (/nlp|natural language|text mining|sentiment analysis|named entity|text classification|transformer|bert|spacy|hugging\s*face/i.test(combined)) {
-    return "'NLP & Text Processing', 'ML Frameworks', 'Programming Languages', 'Cloud Platforms', 'Data Engineering'";
+  if (/nlp|natural language|text mining|sentiment analysis|named entity|text classification|transformer|bert|spacy|hugging\s*face|language model/i.test(combined)) {
+    const hasGenAI = /llm|generative|gpt|prompt|rag/i.test(combined);
+    if (hasGenAI) return "'NLP & Language Models', 'GenAI & LLM Tools', 'Programming Languages', 'ML Frameworks & Libraries', 'Cloud & Data Infrastructure'";
+    return "'NLP & Text Processing', 'ML Frameworks & Libraries', 'Programming Languages', 'Data Engineering & Databases', 'Cloud Platforms'";
   }
 
   // Computer Vision Role
-  if (/computer vision|image recognition|object detection|image segmentation|opencv|yolo|cnn|convolutional|image processing/i.test(combined)) {
-    return "'Computer Vision', 'Deep Learning Frameworks', 'Programming Languages', 'Cloud & GPU Infrastructure', 'Data Processing'";
+  if (/computer vision|image recognition|object detection|image segmentation|opencv|yolo|cnn|convolutional|image processing|video analysis|3d vision/i.test(combined)) {
+    return "'Computer Vision & Image Processing', 'Deep Learning Frameworks', 'Programming Languages', 'Cloud & GPU Infrastructure', 'Data Processing & Pipelines'";
   }
 
   // MLOps / ML Engineering Role
-  if (/mlops|ml engineer|model deployment|model serving|feature store|ml pipeline|kubeflow|mlflow|sagemaker|vertex ai/i.test(combined)) {
-    return "'MLOps & Pipelines', 'Cloud Platforms', 'Programming Languages', 'Containerization & Orchestration', 'Monitoring & Observability'";
+  if (/mlops|ml engineer|model deployment|model serving|feature store|ml pipeline|kubeflow|mlflow|sagemaker|vertex ai|model monitoring|experiment tracking/i.test(combined)) {
+    return "'MLOps & ML Pipelines', 'Cloud Platforms & Infrastructure', 'Programming Languages', 'Containerization & Orchestration', 'Monitoring & Experiment Tracking'";
   }
 
   // Data Science / ML Role (general)
-  if (/ml|machine learning|artificial intelligence|data science|deep learning|neural network|predictive model/i.test(combined)) {
-    return "'Machine Learning & AI', 'Programming Languages', 'Data Engineering', 'Cloud Platforms', 'Tools & Frameworks'";
+  if (/ml|machine learning|artificial intelligence|data science|deep learning|neural network|predictive model|statistical model/i.test(combined)) {
+    // Sub-detect specialization
+    const hasDE = /pipeline|etl|spark|airflow|kafka|warehouse/i.test(combined);
+    const hasViz = /tableau|power bi|looker|dashboard|visualization/i.test(combined);
+    if (hasDE) return "'Machine Learning & AI', 'Data Engineering & Pipelines', 'Programming Languages', 'Cloud Platforms', 'ML Frameworks & Libraries'";
+    if (hasViz) return "'Machine Learning & AI', 'Data Visualization & Analytics', 'Programming Languages', 'Cloud Platforms', 'ML Frameworks & Libraries'";
+    return "'Machine Learning & AI', 'ML Frameworks & Libraries', 'Programming Languages', 'Cloud Platforms', 'Data Engineering & Tools'";
   }
 
   // Data Engineering Role
-  if (/data engineer|etl|data pipeline|data warehouse|spark|airflow|kafka|dbt|snowflake|redshift|bigquery|data lake/i.test(combined)) {
-    return "'Data Pipeline & ETL', 'Databases & Warehouses', 'Programming Languages', 'Cloud Platforms', 'Orchestration & Tools'";
+  if (/data engineer|etl|data pipeline|data warehouse|spark|airflow|kafka|dbt|snowflake|redshift|bigquery|data lake|data mesh/i.test(combined)) {
+    return "'Data Pipeline & ETL', 'Databases & Warehouses', 'Programming Languages', 'Cloud Platforms', 'Orchestration & Streaming'";
   }
 
   // Data Analyst / BI Role
