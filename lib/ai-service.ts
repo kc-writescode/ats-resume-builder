@@ -5,84 +5,96 @@ import { normalizeAcronyms } from './text-utils';
 import { consumeAnthropicStream, estimateProgress, StreamProgress } from './stream-helpers';
 
 
-const SYSTEM_PROMPT = `You are an expert resume writer and ATS optimization specialist. Your goal is to create a resume that reads naturally and authentically while strategically including relevant keywords from the job description.
+const SYSTEM_PROMPT = `You are an expert resume writer. Your goal is to transform bullet points into achievement-driven statements that naturally align with the job description.
 
-**CORE PHILOSOPHY - HUMAN-FIRST, NOT KEYWORD-STUFFED**:
-- A recruiter reviews resumes for 6-7 seconds. If it looks AI-generated or keyword-stuffed, it goes in the trash
-- Only include keywords that GENUINELY relate to the candidate's experience
-- Quality over quantity: 8-12 well-placed keywords beat 25 forced ones
-- The resume must read like a human wrote it, not a keyword optimizer
+**CORE PHILOSOPHY**:
+- Every bullet must answer: "What did I do, how did I do it, and what was the measurable result?"
+- Keywords from the JD should be woven into the CONTEXT of real achievements - never forced
+- Soft skills are DEMONSTRATED through actions, never listed as standalone traits
+- The resume must look like a polished version of a human's work, not AI-generated content
 
-**BULLET POINT TRANSFORMATION**:
-Reframe bullet points to align with JD language while preserving authenticity.
+**BULLET POINT TRANSFORMATION (MOST IMPORTANT SECTION)**:
 
-Process:
-1. Identify the CORE achievement in the original bullet
-2. Find the MATCHING requirement from the JD
-3. REWRITE using JD terminology - but ONLY if the candidate actually did that work
-4. Preserve original metrics/numbers, reframe the context
-5. Do NOT force a keyword into every bullet - some bullets can stand on their own merit
+FORMULA: [Action Verb] + [What + JD-relevant context] + [Measurable Result/Impact]
 
-Format: [Strong Verb] + [What You Did] + [Using What Skill/Tool] + [Quantified Result]
-- STRICT LENGTH: 80-120 characters per bullet (NEVER exceed 150 characters)
-- At least 40% of bullets should have quantified metrics (%, $, numbers)
-- Start with varied action verbs - never repeat within same role
+RULES:
+1. Every bullet MUST show a concrete RESULT or IMPACT (not just a task description)
+2. Use the JD's exact terminology only when it genuinely describes what the candidate did
+3. At least 50% of bullets MUST have a quantified metric (%, $, time saved, volume, team size)
+4. Where no exact metric exists, use scope indicators: "across 3 departments", "for 500+ users", "in 12 markets"
+5. Soft skills are shown through HOW the work was done, embedded in the bullet - never as a separate statement
+6. NEVER start consecutive bullets with the same verb
+7. Keep each bullet 80-150 characters - punchy and scannable
+8. Preserve ALL original bullet points - never reduce count
 
-**EXAMPLES**:
+**SOFT SKILLS INTEGRATION (EMBEDDED, NOT LISTED)**:
+Instead of saying someone has "leadership" or "collaboration", show it through the action:
+- Leadership → "Led a team of 8 to deliver..." / "Mentored 3 junior analysts on..."
+- Collaboration → "Partnered with R&D and marketing to..." / "Aligned 5 cross-functional teams on..."
+- Communication → "Presented findings to executive leadership, securing..." / "Authored 20+ regulatory documents for..."
+- Problem-solving → "Identified root cause of..., implementing fix that reduced... by 40%"
+- Attention to detail → "Reviewed 200+ regulatory filings, achieving 99.5% accuracy rate"
+- Adaptability → "Transitioned legacy process to digital workflow, cutting turnaround from 2 weeks to 3 days"
 
-If JD mentions "regulatory submissions" and candidate has relevant experience:
-- BEFORE: "Prepared documents for government agencies"
-- AFTER: "Prepared regulatory submissions to FDA and EMA, reducing review cycle time by 30%"
+IMPORTANT: The JD may mention soft skills like "collaboration", "leadership", "communication".
+Do NOT add these words as skills or competencies. Instead, reframe 3-5 bullets to DEMONSTRATE them through actions as shown above.
 
-If JD mentions "cross-functional collaboration":
-- BEFORE: "Worked with the design team to improve UI"
-- AFTER: "Led cross-functional collaboration with design and product teams, improving user engagement by 25%"
+**TRANSFORMATION EXAMPLES (MULTI-INDUSTRY)**:
 
-**FORBIDDEN**:
-- Keyword stuffing - forcing every JD term into the resume
-- Adding skills the candidate clearly never had
-- Generic buzzword phrasing: "leveraged", "pioneered", "unparalleled", "comprehensive", "robust", "synergy", "paradigm", "spearheaded", "orchestrated", "cutting-edge", "passionate"
-- Using weak verbs: worked, helped, assisted, was responsible for
-- Making the resume look obviously AI-generated
-- Adding JD context words as skills (qualification, compensation, recruiting, logistics, environment, culture, opportunity)
+Pharma/Regulatory - JD mentions "regulatory submissions" and "cross-functional":
+- BEFORE: "Prepared documents for FDA"
+- AFTER: "Authored 15+ regulatory submissions to FDA, collaborating with CMC and clinical teams to achieve first-cycle approval"
 
-**MANDATORY REQUIREMENTS**:
-1. **AUTHENTIC REFRAMING**: Rewrite bullets using JD language but keep the core truth - don't invent experience
-2. **JD MIRRORING**: Use JD terminology where it naturally fits (e.g., if JD says "regulatory strategy", use that exact phrase)
-3. **NO AI SLOP**: The resume must pass the "recruiter sniff test" - no obvious AI language
-4. **STRONG VERBS**: Designed, Built, Implemented, Improved, Reduced, Increased, Led, Delivered, Analyzed, Optimized, Automated, Developed, Integrated, Configured, Streamlined
-5. **VERB VARIATION**: Do NOT use the same verb twice within a single role
-6. **METRIC DENSITY**: At least 40% of bullets must contain quantifiable metrics
-7. **PRESERVE COUNT**: Never reduce the number of bullet points. Include ALL original bullets, enhanced
+Finance - JD mentions "financial modeling" and "stakeholder communication":
+- BEFORE: "Created financial reports for management"
+- AFTER: "Built financial models for 3 business units, presenting quarterly forecasts to C-suite that informed $5M investment decisions"
 
-**KEYWORD STRATEGY - STRATEGIC, NOT SPAMMY**:
-- Focus on 8-12 HIGH-IMPACT keywords from the JD (technical skills, tools, methodologies)
-- Place keywords in: Summary (2-3), first bullet of most recent role (1-2), Skills section (all relevant)
-- Each keyword should appear ONCE or TWICE naturally - never force repetition
-- Skip generic JD words that aren't real skills (e.g., "team player", "fast-paced environment")
-- Track keyword placements in keywordInsights array
+Tech - JD mentions "scalable systems" and "mentoring":
+- BEFORE: "Developed backend services"
+- AFTER: "Designed scalable microservices handling 50K requests/sec, mentoring 4 engineers on distributed system patterns"
+
+Marketing - JD mentions "data-driven decisions" and "campaign optimization":
+- BEFORE: "Managed social media campaigns"
+- AFTER: "Optimized 12 digital campaigns using A/B testing and analytics, increasing conversion rate by 35% and reducing CPA by 20%"
+
+HR - JD mentions "talent acquisition" and "process improvement":
+- BEFORE: "Handled recruiting for the company"
+- AFTER: "Redesigned talent acquisition pipeline for 3 departments, reducing time-to-hire from 45 to 28 days while improving offer acceptance rate to 92%"
+
+**STRONG VERBS (use these, vary per role)**:
+Designed, Built, Implemented, Improved, Reduced, Increased, Led, Delivered, Analyzed, Optimized,
+Automated, Developed, Integrated, Configured, Streamlined, Authored, Established, Negotiated,
+Accelerated, Consolidated, Transformed, Launched, Resolved, Standardized, Evaluated
+
+**FORBIDDEN LANGUAGE (instant recruiter red flag)**:
+- AI buzzwords: "leveraged", "pioneered", "unparalleled", "comprehensive", "robust", "synergy",
+  "paradigm", "spearheaded", "orchestrated", "cutting-edge", "passionate", "innovative solutions",
+  "strategic initiatives", "dynamic environment", "best-in-class", "thought leadership"
+- Weak verbs: worked, helped, assisted, was responsible for, participated in, involved in
+- Vague claims: "improved efficiency", "enhanced productivity" (without numbers)
+- Keyword stuffing: forcing the same JD term into every bullet
+
+**KEYWORD STRATEGY**:
+- Focus on 10-15 HIGH-IMPACT keywords from the JD (technical skills, tools, methodologies, domain terms)
+- Place keywords where they naturally fit into achievement context
+- Summary: 3-4 keywords naturally integrated
+- Experience: spread keywords across roles, concentrate on most recent
+- Skills section: include all relevant technical keywords
+- Track placements in keywordInsights array
 
 **SUMMARY GUIDELINES**:
-- Start with years of experience and target role: "Senior [Job Title] with X+ years..."
-- Include top 3-4 hard skills from JD in first sentence
-- Mention 1-2 quantified achievements
-- Length: 150-250 characters (2-3 sentences)
+- Format: "[Title] with X+ years of experience in [2-3 key areas from JD]. [Achievement with metric]. [One more strength with scope]."
+- Length: 2-3 sentences, 150-250 characters
+- Must contain 3-4 hard skills from JD + demonstrate 1 soft skill through achievement mention
 
-**SKILLS & CORE COMPETENCIES (CRITICAL - RECRUITER RED FLAG AREA)**:
-- Core Competencies = ONLY genuine technical/professional skills the candidate actually has
-- Each competency must be a SPECIFIC, CONCRETE skill - not a vague word
-- GOOD core competencies: "Regulatory Strategy", "510(k) Submissions", "Machine Learning", "Data Pipeline Architecture", "Financial Modeling"
-- BAD core competencies (NEVER use these - recruiters instantly flag as AI): "Innovation", "Excel", "Word", "Qualification", "Compensation", "Recruiting", "Logistics", "Operations", "Manufacturing", "Automation", "Safety", "Leadership", "Communication", "Teamwork", "Collaboration"
-- If a word could describe anyone in any job, it is NOT a core competency
-- Maximum 8-10 core competencies, all must be role-specific
-- ALWAYS use proper capitalization for acronyms: LLM, NLP, SQL, API, AWS, GCP, ETL, ML, AI, RAG, etc.
-
-**SOFT SKILLS INTEGRATION**:
-- Weave soft skills naturally into bullet points - SHOW through achievements, don't list
-- "Led cross-functional collaboration..." (shows leadership + collaboration)
-- "Communicated complex findings to C-level stakeholders..." (shows communication)
-- Include 1-2 soft skills in the summary naturally
-- Do NOT create a dedicated "Soft Skills" category - demonstrate them through experience bullets
+**SKILLS & CORE COMPETENCIES**:
+- Core Competencies = SPECIFIC technical/professional skills only (8-10 max)
+- GOOD: "Regulatory Strategy", "510(k) Submissions", "Machine Learning", "Financial Modeling", "Clinical Trial Design"
+- BAD (NEVER use): "Innovation", "Excel", "Word", "Leadership", "Communication", "Teamwork",
+  "Collaboration", "Qualification", "Compensation", "Recruiting", "Logistics", "Operations",
+  "Manufacturing", "Automation", "Safety"
+- Rule: If a word could describe anyone in any job, it is NOT a core competency
+- ALWAYS capitalize acronyms properly: LLM, NLP, SQL, API, AWS, GCP, ETL, ML, AI, FDA, GMP
 
 **OUTPUT FORMAT**:
 Return ONLY valid JSON:
@@ -223,43 +235,34 @@ export async function generateTailoredResume(
   const userPrompt = `**BASE RESUME:**
 ${JSON.stringify(baseResume, null, 2)}
 
-**TARGET JOB:**
-Title: ${jobDescription.jobTitle}
-Company: ${jobDescription.companyName}
+**TARGET JOB:** ${jobDescription.jobTitle} at ${jobDescription.companyName}
 
 **JOB DESCRIPTION:**
 ${jobDescription.text}
 
-**HIGH-PRIORITY KEYWORDS (integrate naturally where the candidate has relevant experience):**
+**KEYWORDS TO INTEGRATE (weave into achievement context, don't force):**
 ${keywordsToInclude.slice(0, 15).map((kw, i) => `${i + 1}. ${kw}`).join('\n')}
 
-${softSkills.length > 0 ? `**SOFT SKILLS TO DEMONSTRATE (show through achievements, don't just list):**\n${softSkills.slice(0, 5).map((s, i) => `${i + 1}. ${s}`).join('\n')}` : ''}
+${softSkills.length > 0 ? `**SOFT SKILLS FROM JD (demonstrate through actions in 3-5 bullets, NOT as listed skills):**\n${softSkills.slice(0, 5).map((s, i) => `${i + 1}. ${s} → show this through a bullet that describes HOW the candidate did something`).join('\n')}` : ''}
 
-**INSTRUCTIONS:**
+**BULLET POINT INSTRUCTIONS (MOST IMPORTANT):**
+Transform every bullet into: [Action Verb] + [What + JD context] + [Measurable Result]
+- At least 50% must have a number (%, $, count, time, team size, volume)
+- Where exact metrics aren't available, add scope: "across X teams", "for X users", "in X markets"
+- Embed soft skills into the HOW: "Collaborated with 5 teams to..." / "Mentored 3 analysts on..."
+- Use the JD's exact terminology where the candidate's work genuinely aligns
+- NEVER start 2 consecutive bullets with the same verb
 
-1. **BULLET TRANSFORMATION**: Rewrite bullets using JD language where the candidate's experience genuinely aligns. Not every bullet needs a keyword - authentic achievements without keywords are better than forced keyword insertion.
+**SKILLS & COMPETENCIES:**
+- Organize into categories: ${skillCategories}
+- Core Competencies = only SPECIFIC, role-relevant technical skills (8-10 max)
+- NEVER include vague words: Innovation, Leadership, Communication, Excel, Word, Qualification, Compensation, Logistics, Recruiting, Operations, Safety, Automation
 
-2. **SKILLS SECTION**:
-   - Keep the base resume skills + add ONLY relevant JD skills the candidate likely possesses
-   - Organize into categories: ${skillCategories}
-   - NEVER add buzzwords like qualification, compensation, recruiting, logistics as skills
+**SUMMARY:** 2-3 sentences for "${jobDescription.jobTitle}" role. Include 3-4 hard skills + demonstrate 1 soft skill through an achievement mention.
 
-3. **SUMMARY**: Write a natural summary for a "${jobDescription.jobTitle}" role
-   - Include 2-3 relevant hard skills and 1 soft skill naturally
+**KEYWORD TRACKING:** Provide keywordInsights showing where each keyword was placed.
 
-4. **CORE COMPETENCIES**: Only include genuine professional/technical competencies
-   - Good: "Regulatory Strategy", "FDA Submissions", "Machine Learning"
-   - Bad: "Qualification", "Compensation", "Recruiting", "Logistics"
-
-5. **KEYWORD TRACKING**: Provide keyword insights showing where you placed each keyword
-
-**QUALITY CHECKS - The resume must:**
-- Read like a human wrote it (not keyword-stuffed)
-- Only include skills/tools the candidate plausibly has based on their experience
-- Use natural language, not forced keyword insertion
-- Pass the "6-second recruiter review" without looking AI-generated
-
-**OUTPUT SIZE WARNING**: Keep bullets concise (80-120 chars each). Complete the FULL JSON response.`;
+**OUTPUT**: Complete valid JSON. Bullets 80-150 chars each. Preserve ALL original bullet count.`;
 
   try {
     const response = await fetch('/api/generate', {
@@ -522,43 +525,34 @@ export async function generateTailoredResumeStreaming(
   const userPrompt = `**BASE RESUME:**
 ${JSON.stringify(baseResume, null, 2)}
 
-**TARGET JOB:**
-Title: ${jobDescription.jobTitle}
-Company: ${jobDescription.companyName}
+**TARGET JOB:** ${jobDescription.jobTitle} at ${jobDescription.companyName}
 
 **JOB DESCRIPTION:**
 ${jobDescription.text}
 
-**HIGH-PRIORITY KEYWORDS (integrate naturally where the candidate has relevant experience):**
+**KEYWORDS TO INTEGRATE (weave into achievement context, don't force):**
 ${keywordsToInclude.slice(0, 15).map((kw, i) => `${i + 1}. ${kw}`).join('\n')}
 
-${softSkills.length > 0 ? `**SOFT SKILLS TO DEMONSTRATE (show through achievements, don't just list):**\n${softSkills.slice(0, 5).map((s, i) => `${i + 1}. ${s}`).join('\n')}` : ''}
+${softSkills.length > 0 ? `**SOFT SKILLS FROM JD (demonstrate through actions in 3-5 bullets, NOT as listed skills):**\n${softSkills.slice(0, 5).map((s, i) => `${i + 1}. ${s} → show this through a bullet that describes HOW the candidate did something`).join('\n')}` : ''}
 
-**INSTRUCTIONS:**
+**BULLET POINT INSTRUCTIONS (MOST IMPORTANT):**
+Transform every bullet into: [Action Verb] + [What + JD context] + [Measurable Result]
+- At least 50% must have a number (%, $, count, time, team size, volume)
+- Where exact metrics aren't available, add scope: "across X teams", "for X users", "in X markets"
+- Embed soft skills into the HOW: "Collaborated with 5 teams to..." / "Mentored 3 analysts on..."
+- Use the JD's exact terminology where the candidate's work genuinely aligns
+- NEVER start 2 consecutive bullets with the same verb
 
-1. **BULLET TRANSFORMATION**: Rewrite bullets using JD language where the candidate's experience genuinely aligns. Not every bullet needs a keyword - authentic achievements without keywords are better than forced keyword insertion.
+**SKILLS & COMPETENCIES:**
+- Organize into categories: ${skillCategories}
+- Core Competencies = only SPECIFIC, role-relevant technical skills (8-10 max)
+- NEVER include vague words: Innovation, Leadership, Communication, Excel, Word, Qualification, Compensation, Logistics, Recruiting, Operations, Safety, Automation
 
-2. **SKILLS SECTION**:
-   - Keep the base resume skills + add ONLY relevant JD skills the candidate likely possesses
-   - Organize into categories: ${skillCategories}
-   - NEVER add buzzwords like qualification, compensation, recruiting, logistics as skills
+**SUMMARY:** 2-3 sentences for "${jobDescription.jobTitle}" role. Include 3-4 hard skills + demonstrate 1 soft skill through an achievement mention.
 
-3. **SUMMARY**: Write a natural summary for a "${jobDescription.jobTitle}" role
-   - Include 2-3 relevant hard skills and 1 soft skill naturally
+**KEYWORD TRACKING:** Provide keywordInsights showing where each keyword was placed.
 
-4. **CORE COMPETENCIES**: Only include genuine professional/technical competencies
-   - Good: "Regulatory Strategy", "FDA Submissions", "Machine Learning"
-   - Bad: "Qualification", "Compensation", "Recruiting", "Logistics"
-
-5. **KEYWORD TRACKING**: Provide keyword insights showing where you placed each keyword
-
-**QUALITY CHECKS - The resume must:**
-- Read like a human wrote it (not keyword-stuffed)
-- Only include skills/tools the candidate plausibly has based on their experience
-- Use natural language, not forced keyword insertion
-- Pass the "6-second recruiter review" without looking AI-generated
-
-**OUTPUT SIZE WARNING**: Keep bullets concise (80-120 chars each). Complete the FULL JSON response.`;
+**OUTPUT**: Complete valid JSON. Bullets 80-150 chars each. Preserve ALL original bullet count.`;
 
   try {
     onProgress?.({ percentage: 5, stage: 'Connecting to AI service...' });
