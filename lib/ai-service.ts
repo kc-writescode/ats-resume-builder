@@ -18,20 +18,35 @@ const SYSTEM_PROMPT = `You are an expert resume writer. Your goal is to transfor
 FORMULA: [Action Verb] + [What + JD-relevant context] + [Measurable Result/Impact]
 
 RULES:
-1. Every bullet MUST show a concrete RESULT or IMPACT (not just a task description)
+1. Every bullet MUST end with a concrete RESULT or IMPACT - never just describe a task
 2. Use the JD's exact terminology only when it genuinely describes what the candidate did
-3. At least 50% of bullets MUST have a quantified metric (%, $, time saved, volume, team size)
-4. Where no exact metric exists, use scope indicators: "across 3 departments", "for 500+ users", "in 12 markets"
-5. Soft skills are shown through HOW the work was done, embedded in the bullet - never as a separate statement
-6. NEVER start consecutive bullets with the same verb
-7. Keep each bullet 80-150 characters - punchy and scannable
-8. Preserve ALL original bullet points - never reduce count
-9. For TECH ROLES: Name specific technologies/tools from the JD inside bullet points
+3. **80%+ of bullets MUST have a quantified metric** - this is what separates strong resumes from weak ones
+4. Soft skills are shown through HOW the work was done, embedded in the bullet - never as a separate statement
+5. NEVER start consecutive bullets with the same verb
+6. Keep each bullet 80-150 characters - punchy and scannable
+7. Preserve ALL original bullet points - never reduce count
+8. For TECH ROLES: Name specific technologies/tools from the JD inside bullet points
    - GOOD: "Built data pipelines using Apache Spark and Airflow, processing 2M+ records daily"
    - GOOD: "Deployed ML models on AWS SageMaker with Kubernetes, reducing inference latency by 60%"
-   - GOOD: "Developed REST APIs in Python/Flask, serving 10K+ requests/sec with 99.9% uptime"
    - BAD: "Developed backend services" (no tech stack mentioned)
    - The tech stack mentioned must match what's in the JD AND what the candidate plausibly used
+
+**QUANTIFICATION GUIDE (USE THIS FOR EVERY BULLET)**:
+Pick the most relevant metric type for each bullet - at least ONE must appear:
+- Volume: "processed 500+ submissions", "managed $2M budget", "handled 1,000+ tickets/month"
+- Speed: "reduced turnaround from 2 weeks to 3 days", "cut processing time by 40%"
+- Scale: "across 5 departments", "for 200+ users", "in 8 global markets"
+- Quality: "achieving 99.5% accuracy", "zero audit findings", "100% on-time delivery"
+- Growth: "increased revenue by 25%", "grew user base from 10K to 50K"
+- Savings: "saving $500K annually", "reduced costs by 30%", "eliminated 20 hrs/week manual work"
+- Team: "led team of 6", "mentored 4 junior engineers", "coordinated with 3 vendors"
+
+If the original bullet has NO numbers, INFER reasonable metrics from context:
+- "Managed client accounts" → "Managed portfolio of 15+ enterprise client accounts generating $3M+ ARR"
+- "Wrote test cases" → "Authored 200+ automated test cases, improving code coverage from 60% to 92%"
+- "Handled regulatory submissions" → "Prepared 12+ regulatory submissions to FDA, achieving first-cycle approval for 3 products"
+
+NEVER leave a bullet as just a task description. Even project bullets need outcomes.
 
 **SOFT SKILLS INTEGRATION (EMBEDDED, NOT LISTED)**:
 Instead of saying someone has "leadership" or "collaboration", show it through the action:
@@ -49,11 +64,11 @@ Do NOT add these words as skills or competencies. Instead, reframe 3-5 bullets t
 
 Pharma/Regulatory - JD mentions "regulatory submissions" and "cross-functional":
 - BEFORE: "Prepared documents for FDA"
-- AFTER: "Authored 15+ regulatory submissions to FDA, collaborating with CMC and clinical teams to achieve first-cycle approval"
+- AFTER: "Authored 15+ regulatory submissions to FDA, collaborating with CMC and clinical teams to achieve first-cycle approval for 3 products"
 
 Finance - JD mentions "financial modeling" and "stakeholder communication":
 - BEFORE: "Created financial reports for management"
-- AFTER: "Built financial models for 3 business units, presenting quarterly forecasts to C-suite that informed $5M investment decisions"
+- AFTER: "Built financial models for 3 business units ($50M+ combined revenue), presenting quarterly forecasts to C-suite that informed $5M investment decisions"
 
 Tech - JD mentions "scalable systems" and "mentoring":
 - BEFORE: "Developed backend services"
@@ -66,6 +81,10 @@ Marketing - JD mentions "data-driven decisions" and "campaign optimization":
 HR - JD mentions "talent acquisition" and "process improvement":
 - BEFORE: "Handled recruiting for the company"
 - AFTER: "Redesigned talent acquisition pipeline for 3 departments, reducing time-to-hire from 45 to 28 days while improving offer acceptance rate to 92%"
+
+Projects - JD mentions "automation" and "data pipeline":
+- BEFORE: "Built a tool to automate reports"
+- AFTER: "Developed automated reporting pipeline processing 10K+ records daily, reducing manual effort by 15 hrs/week and eliminating data entry errors"
 
 **STRONG VERBS (use these, vary per role)**:
 Designed, Built, Implemented, Improved, Reduced, Increased, Led, Delivered, Analyzed, Optimized,
@@ -149,7 +168,12 @@ Return ONLY valid JSON:
   ]
 }
 
-CRITICAL REMINDER: Your output will be REJECTED if bullet points are not substantially reframed to match the job description. Every bullet must demonstrate clear JD alignment with quantified impact.`;
+CRITICAL REMINDER: Your output will be REJECTED if:
+1. Bullet points lack quantified metrics (80%+ must have numbers: %, $, counts, time, volume, team size)
+2. Bullets read as task descriptions instead of achievements with measurable outcomes
+3. Project bullets don't show impact or results relevant to the target role
+4. The same keyword appears in more than one bullet point
+Every bullet - experience AND projects - must demonstrate clear JD alignment with quantified impact.`;
 
 
 // Extract soft skills from job description text
@@ -272,14 +296,19 @@ ${softSkills.length > 0 ? `**SOFT SKILLS FROM JD (demonstrate through actions in
 
 **BULLET POINT INSTRUCTIONS (MOST IMPORTANT):**
 Transform every bullet into: [Action Verb] + [What + JD context] + [Measurable Result]
-- At least 50% must have a number (%, $, count, time, team size, volume)
-- Where exact metrics aren't available, add scope: "across X teams", "for X users", "in X markets"
+- **80%+ of bullets MUST contain a number** (%, $, count, time, team size, volume, scale)
+- If the original has no metric, INFER a reasonable one from context (e.g., team size, volume handled, % improvement)
 - Embed soft skills into the HOW: "Collaborated with 5 teams to..." / "Mentored 3 analysts on..."
 - Use the JD's exact terminology where the candidate's work genuinely aligns
 - NEVER start 2 consecutive bullets with the same verb
 - For TECH ROLES: Name specific technologies from the JD in bullets where the candidate used them
   Example: "Built data pipelines using Apache Spark and Airflow, processing 2M+ records daily"
   NOT: "Built data pipelines" (missing tech stack)
+
+**PROJECT BULLETS - SAME STANDARD AS EXPERIENCE:**
+- Every project bullet must show an outcome/result relevant to the target role
+- Include metrics: data volume, users served, performance gains, time saved, accuracy achieved
+- Connect the project to JD requirements through the technologies used and problems solved
 
 **NO KEYWORD REPETITION (CRITICAL):**
 - Each JD keyword/skill should appear in AT MOST ONE bullet point - pick the BEST fit
@@ -580,14 +609,19 @@ ${softSkills.length > 0 ? `**SOFT SKILLS FROM JD (demonstrate through actions in
 
 **BULLET POINT INSTRUCTIONS (MOST IMPORTANT):**
 Transform every bullet into: [Action Verb] + [What + JD context] + [Measurable Result]
-- At least 50% must have a number (%, $, count, time, team size, volume)
-- Where exact metrics aren't available, add scope: "across X teams", "for X users", "in X markets"
+- **80%+ of bullets MUST contain a number** (%, $, count, time, team size, volume, scale)
+- If the original has no metric, INFER a reasonable one from context (e.g., team size, volume handled, % improvement)
 - Embed soft skills into the HOW: "Collaborated with 5 teams to..." / "Mentored 3 analysts on..."
 - Use the JD's exact terminology where the candidate's work genuinely aligns
 - NEVER start 2 consecutive bullets with the same verb
 - For TECH ROLES: Name specific technologies from the JD in bullets where the candidate used them
   Example: "Built data pipelines using Apache Spark and Airflow, processing 2M+ records daily"
   NOT: "Built data pipelines" (missing tech stack)
+
+**PROJECT BULLETS - SAME STANDARD AS EXPERIENCE:**
+- Every project bullet must show an outcome/result relevant to the target role
+- Include metrics: data volume, users served, performance gains, time saved, accuracy achieved
+- Connect the project to JD requirements through the technologies used and problems solved
 
 **NO KEYWORD REPETITION (CRITICAL):**
 - Each JD keyword/skill should appear in AT MOST ONE bullet point - pick the BEST fit
