@@ -26,6 +26,12 @@ RULES:
 6. NEVER start consecutive bullets with the same verb
 7. Keep each bullet 80-150 characters - punchy and scannable
 8. Preserve ALL original bullet points - never reduce count
+9. For TECH ROLES: Name specific technologies/tools from the JD inside bullet points
+   - GOOD: "Built data pipelines using Apache Spark and Airflow, processing 2M+ records daily"
+   - GOOD: "Deployed ML models on AWS SageMaker with Kubernetes, reducing inference latency by 60%"
+   - GOOD: "Developed REST APIs in Python/Flask, serving 10K+ requests/sec with 99.9% uptime"
+   - BAD: "Developed backend services" (no tech stack mentioned)
+   - The tech stack mentioned must match what's in the JD AND what the candidate plausibly used
 
 **SOFT SKILLS INTEGRATION (EMBEDDED, NOT LISTED)**:
 Instead of saying someone has "leadership" or "collaboration", show it through the action:
@@ -72,29 +78,48 @@ Accelerated, Consolidated, Transformed, Launched, Resolved, Standardized, Evalua
   "strategic initiatives", "dynamic environment", "best-in-class", "thought leadership"
 - Weak verbs: worked, helped, assisted, was responsible for, participated in, involved in
 - Vague claims: "improved efficiency", "enhanced productivity" (without numbers)
-- Keyword stuffing: forcing the same JD term into every bullet
+- Keyword stuffing: forcing the same JD term into multiple bullets - use each keyword ONCE
+- Keyword appending: tacking on keywords at the end of a bullet like "...utilizing [keyword]" or "...leveraging [keyword]"
+- Keyword listing: turning a bullet into a list of skills instead of an achievement statement
 
-**KEYWORD STRATEGY**:
+**KEYWORD STRATEGY (NO REPETITION)**:
 - Focus on 10-15 HIGH-IMPACT keywords from the JD (technical skills, tools, methodologies, domain terms)
-- Place keywords where they naturally fit into achievement context
+- **EACH keyword should appear AT MOST ONCE in bullet points** - pick the single best bullet where it fits most naturally
+- Do NOT scatter the same keyword across multiple bullets - one strong placement beats three forced ones
+- Place keywords where they naturally fit into achievement context - as part of the work description, NOT appended as tags
 - Summary: 3-4 keywords naturally integrated
-- Experience: spread keywords across roles, concentrate on most recent
-- Skills section: include all relevant technical keywords
+- Experience: distribute different keywords across roles, concentrate on most recent role
+- Skills/Core Competencies: the only place where listing keywords without narrative context is acceptable
 - Track placements in keywordInsights array
+
+**ANTI-PATTERNS TO AVOID**:
+- WRONG: Repeating "data analysis" in 4 different bullets across roles
+- WRONG: "Managed projects, leveraging data analysis" (keyword tacked on, not part of the actual work)
+- WRONG: "Implemented solutions utilizing cross-functional collaboration and stakeholder management" (keyword salad)
+- RIGHT: "Analyzed 3 years of patient data to identify enrollment trends, reducing trial delays by 25%" (keyword is the actual work)
+- RIGHT: Each keyword appears once, in the bullet where it's most relevant and impactful
 
 **SUMMARY GUIDELINES**:
 - Format: "[Title] with X+ years of experience in [2-3 key areas from JD]. [Achievement with metric]. [One more strength with scope]."
 - Length: 2-3 sentences, 150-250 characters
 - Must contain 3-4 hard skills from JD + demonstrate 1 soft skill through achievement mention
 
-**SKILLS & CORE COMPETENCIES**:
-- Core Competencies = SPECIFIC technical/professional skills only (8-10 max)
-- GOOD: "Regulatory Strategy", "510(k) Submissions", "Machine Learning", "Financial Modeling", "Clinical Trial Design"
-- BAD (NEVER use): "Innovation", "Excel", "Word", "Leadership", "Communication", "Teamwork",
-  "Collaboration", "Qualification", "Compensation", "Recruiting", "Logistics", "Operations",
-  "Manufacturing", "Automation", "Safety"
-- Rule: If a word could describe anyone in any job, it is NOT a core competency
-- ALWAYS capitalize acronyms properly: LLM, NLP, SQL, API, AWS, GCP, ETL, ML, AI, FDA, GMP
+**CORE COMPETENCIES (STRICT RULES - NO EXCEPTIONS)**:
+- ONLY include skills that exist in BOTH the candidate's base resume AND the job description
+- Do NOT invent or add skills the candidate doesn't already have
+- Do NOT add generic/vague words - every competency must be a concrete, testable skill
+- Maximum 8-10 competencies, all must be role-specific technical or professional terms
+- GOOD: "Regulatory Strategy", "510(k) Submissions", "Machine Learning", "Python", "AWS", "Data Pipeline Architecture"
+- BAD (NEVER use - these are not skills): "Innovation", "Excel", "Word", "Leadership", "Communication",
+  "Teamwork", "Collaboration", "Qualification", "Compensation", "Recruiting", "Logistics",
+  "Operations", "Manufacturing", "Automation", "Safety", "Problem Solving", "Detail Oriented"
+- Test: "Can this be verified in a technical interview?" If no, don't include it
+- ALWAYS capitalize acronyms: LLM, NLP, SQL, API, AWS, GCP, ETL, ML, AI, FDA, GMP
+
+**SKILLS CATEGORIES**:
+- Include skills from base resume + ONLY skills from JD the candidate plausibly possesses
+- For tech roles: list specific languages, frameworks, tools, platforms from JD that match candidate's background
+- NEVER add skills the candidate has zero evidence of having
 
 **OUTPUT FORMAT**:
 Return ONLY valid JSON:
@@ -252,11 +277,29 @@ Transform every bullet into: [Action Verb] + [What + JD context] + [Measurable R
 - Embed soft skills into the HOW: "Collaborated with 5 teams to..." / "Mentored 3 analysts on..."
 - Use the JD's exact terminology where the candidate's work genuinely aligns
 - NEVER start 2 consecutive bullets with the same verb
+- For TECH ROLES: Name specific technologies from the JD in bullets where the candidate used them
+  Example: "Built data pipelines using Apache Spark and Airflow, processing 2M+ records daily"
+  NOT: "Built data pipelines" (missing tech stack)
 
-**SKILLS & COMPETENCIES:**
-- Organize into categories: ${skillCategories}
-- Core Competencies = only SPECIFIC, role-relevant technical skills (8-10 max)
-- NEVER include vague words: Innovation, Leadership, Communication, Excel, Word, Qualification, Compensation, Logistics, Recruiting, Operations, Safety, Automation
+**NO KEYWORD REPETITION (CRITICAL):**
+- Each JD keyword/skill should appear in AT MOST ONE bullet point - pick the BEST fit
+- Do NOT repeat the same keyword across multiple roles or bullets
+- Keywords must be part of the achievement description, NOT appended as tags
+  WRONG: "Managed team operations, utilizing data analysis and stakeholder management"
+  RIGHT: "Analyzed 18 months of operational data to identify bottlenecks, reducing cycle time by 30%"
+- A bullet should read as a genuine achievement - if you removed the keyword, it should still make sense
+
+**CORE COMPETENCIES (STRICT - NO CREATIVE ADDITIONS):**
+- ONLY include skills that appear in BOTH the base resume AND the job description
+- Do NOT invent skills the candidate doesn't have evidence of
+- Every competency must be a concrete, testable skill - "Can this be asked in an interview?"
+- Max 8-10 competencies. Capitalize acronyms properly.
+- NEVER include: Innovation, Leadership, Communication, Excel, Word, Qualification, Compensation, Logistics, Recruiting, Operations, Safety, Automation, Problem Solving, Detail Oriented
+
+**SKILLS CATEGORIES:**
+- Organize into: ${skillCategories}
+- Include base resume skills + ONLY JD skills the candidate plausibly has
+- NEVER add skills with zero evidence from the base resume
 
 **SUMMARY:** 2-3 sentences for "${jobDescription.jobTitle}" role. Include 3-4 hard skills + demonstrate 1 soft skill through an achievement mention.
 
@@ -542,11 +585,29 @@ Transform every bullet into: [Action Verb] + [What + JD context] + [Measurable R
 - Embed soft skills into the HOW: "Collaborated with 5 teams to..." / "Mentored 3 analysts on..."
 - Use the JD's exact terminology where the candidate's work genuinely aligns
 - NEVER start 2 consecutive bullets with the same verb
+- For TECH ROLES: Name specific technologies from the JD in bullets where the candidate used them
+  Example: "Built data pipelines using Apache Spark and Airflow, processing 2M+ records daily"
+  NOT: "Built data pipelines" (missing tech stack)
 
-**SKILLS & COMPETENCIES:**
-- Organize into categories: ${skillCategories}
-- Core Competencies = only SPECIFIC, role-relevant technical skills (8-10 max)
-- NEVER include vague words: Innovation, Leadership, Communication, Excel, Word, Qualification, Compensation, Logistics, Recruiting, Operations, Safety, Automation
+**NO KEYWORD REPETITION (CRITICAL):**
+- Each JD keyword/skill should appear in AT MOST ONE bullet point - pick the BEST fit
+- Do NOT repeat the same keyword across multiple roles or bullets
+- Keywords must be part of the achievement description, NOT appended as tags
+  WRONG: "Managed team operations, utilizing data analysis and stakeholder management"
+  RIGHT: "Analyzed 18 months of operational data to identify bottlenecks, reducing cycle time by 30%"
+- A bullet should read as a genuine achievement - if you removed the keyword, it should still make sense
+
+**CORE COMPETENCIES (STRICT - NO CREATIVE ADDITIONS):**
+- ONLY include skills that appear in BOTH the base resume AND the job description
+- Do NOT invent skills the candidate doesn't have evidence of
+- Every competency must be a concrete, testable skill - "Can this be asked in an interview?"
+- Max 8-10 competencies. Capitalize acronyms properly.
+- NEVER include: Innovation, Leadership, Communication, Excel, Word, Qualification, Compensation, Logistics, Recruiting, Operations, Safety, Automation, Problem Solving, Detail Oriented
+
+**SKILLS CATEGORIES:**
+- Organize into: ${skillCategories}
+- Include base resume skills + ONLY JD skills the candidate plausibly has
+- NEVER add skills with zero evidence from the base resume
 
 **SUMMARY:** 2-3 sentences for "${jobDescription.jobTitle}" role. Include 3-4 hard skills + demonstrate 1 soft skill through an achievement mention.
 
