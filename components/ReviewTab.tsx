@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { GeneratedResume, BaseResume } from '@/types/resume';
-import { analyzeATSCompatibility, extractKeywordsFromJobDescription, analyzeKeywords } from '@/lib/ats-analyzer';
+import { analyzeATSCompatibility, extractKeywordsFromJobDescription, analyzeKeywords, analyzeHumanWritingPatterns } from '@/lib/ats-analyzer';
 import { getTemplateComponent } from './templates';
 import { BoldToolbar } from './BoldToolbar';
 import { KeywordInsights } from './KeywordInsights';
@@ -17,6 +17,7 @@ export function ReviewTab({ resume, onExport, onEdit }: ReviewTabProps) {
   const [editMode, setEditMode] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [showKeywordsDropdown, setShowKeywordsDropdown] = useState(false);
+  const [showHumanScoreDropdown, setShowHumanScoreDropdown] = useState(false);
 
   const jobDescription = extractKeywordsFromJobDescription(resume.jobDescription);
   const atsScore = analyzeATSCompatibility(resume.content, jobDescription);
@@ -25,6 +26,11 @@ export function ReviewTab({ resume, onExport, onEdit }: ReviewTabProps) {
   const keywordAnalysis = useMemo(() => {
     return analyzeKeywords(resume.content, jobDescription);
   }, [resume.content, jobDescription]);
+
+  // Analyze human writing patterns for AI detection resistance
+  const humanWritingScore = useMemo(() => {
+    return analyzeHumanWritingPatterns(resume.content);
+  }, [resume.content]);
 
   // Get the template component
   const TemplateComponent = getTemplateComponent(resume.template);
@@ -193,6 +199,153 @@ export function ReviewTab({ resume, onExport, onEdit }: ReviewTabProps) {
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+      </div>
+
+      {/* AI Detection Resistance Panel */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <button
+          onClick={() => setShowHumanScoreDropdown(!showHumanScoreDropdown)}
+          className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-violet-50 to-purple-50 border-b border-slate-200 hover:from-violet-100 hover:to-purple-100 transition-smooth"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <div className="text-left">
+              <h3 className="font-semibold text-slate-900">AI Detection Resistance</h3>
+              <p className="text-sm text-slate-600">
+                <span className={`font-medium ${
+                  humanWritingScore.overallHumanScore >= 70 ? 'text-green-600' :
+                  humanWritingScore.overallHumanScore >= 50 ? 'text-amber-600' :
+                  'text-red-600'
+                }`}>
+                  {humanWritingScore.overallHumanScore}% human-like
+                </span>
+                {' - how natural your resume reads to recruiters'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className={`text-xs font-medium px-3 py-1 rounded-full ${
+              humanWritingScore.overallHumanScore >= 70 ? 'bg-green-100 text-green-700' :
+              humanWritingScore.overallHumanScore >= 50 ? 'bg-amber-100 text-amber-700' :
+              'bg-red-100 text-red-700'
+            }`}>
+              {humanWritingScore.overallHumanScore >= 70 ? 'Natural' :
+               humanWritingScore.overallHumanScore >= 50 ? 'Moderate' :
+               'Needs Work'}
+            </span>
+            <svg
+              className={`w-5 h-5 text-slate-500 transition-transform duration-300 ${showHumanScoreDropdown ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </button>
+
+        {showHumanScoreDropdown && (
+          <div className="p-6 animate-fade-in-up space-y-4">
+            {/* Metric Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                {
+                  label: 'Structure Variety',
+                  value: humanWritingScore.structureVariation,
+                  target: '60%+',
+                  description: 'Bullet opening patterns vary'
+                },
+                {
+                  label: 'Length Variety',
+                  value: humanWritingScore.sentenceLengthVariation,
+                  target: '50%+',
+                  description: 'Mix of short and long bullets'
+                },
+                {
+                  label: 'Non-Formulaic',
+                  value: 100 - humanWritingScore.formulaicBulletPercentage,
+                  target: '40%+',
+                  description: 'Bullets that break the [Verb]+[Result] pattern'
+                },
+                {
+                  label: 'Clean Language',
+                  value: humanWritingScore.aiTellsFound.length === 0 ? 100
+                    : Math.max(0, 100 - humanWritingScore.aiTellsFound.length * 20),
+                  target: '100%',
+                  description: 'No AI-flagged phrases'
+                },
+              ].map((metric, idx) => (
+                <div
+                  key={idx}
+                  className="bg-white rounded-xl p-4 shadow-sm border border-slate-100 hover:shadow-lg transition-smooth hover:-translate-y-1"
+                  style={{ animationDelay: `${idx * 0.1}s` }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-600">{metric.label}</span>
+                    <span className="text-xs text-gray-400">({metric.target})</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-500 ${
+                          metric.value >= 70 ? 'bg-green-500' :
+                          metric.value >= 50 ? 'bg-amber-500' :
+                          'bg-red-500'
+                        }`}
+                        style={{ width: `${metric.value}%` }}
+                      />
+                    </div>
+                    <span className={`text-lg font-bold min-w-[3rem] text-right ${
+                      metric.value >= 70 ? 'text-green-600' :
+                      metric.value >= 50 ? 'text-amber-600' :
+                      'text-red-600'
+                    }`}>
+                      {metric.value}%
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">{metric.description}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* AI Tells Found */}
+            {humanWritingScore.aiTellsFound.length > 0 && (
+              <div className="bg-red-50 rounded-xl p-4 border border-red-100">
+                <p className="font-medium text-red-700 mb-2 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                  AI-Flagged Phrases Found
+                </p>
+                <p className="text-sm text-red-600 mb-3">These phrases are commonly flagged by recruiters as AI-generated. Replace them with natural alternatives.</p>
+                <div className="flex flex-wrap gap-2">
+                  {humanWritingScore.aiTellsFound.map((tell, i) => (
+                    <span
+                      key={i}
+                      className="px-2.5 py-1 rounded-lg bg-red-100 text-red-700 text-xs font-medium border border-red-200"
+                    >
+                      {tell}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Tips */}
+            {humanWritingScore.formulaicBulletPercentage > 70 && (
+              <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+                <p className="text-sm text-amber-800">
+                  <span className="font-medium">Tip:</span> {humanWritingScore.formulaicBulletPercentage}% of your bullets follow the same &quot;[Verb] ... resulting in [metric]&quot; pattern.
+                  Try varying structure - lead with context, results, or use compound achievements to sound more natural.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>

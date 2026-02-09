@@ -60,6 +60,93 @@ export function analyzeKeywords(
   };
 }
 
+export interface HumanWritingAnalysis {
+  structureVariation: number;        // 0-100, higher = more varied
+  sentenceLengthVariation: number;   // 0-100, higher = more varied
+  formulaicBulletPercentage: number; // % following [Verb]+[What]+[Result] pattern
+  aiTellsFound: string[];            // flagged AI-typical phrases
+  overallHumanScore: number;         // 0-100 composite
+}
+
+export function analyzeHumanWritingPatterns(resume: BaseResume): HumanWritingAnalysis {
+  const allBullets = [
+    ...resume.experience.flatMap(exp => exp.bullets),
+    ...(resume.projects?.flatMap(proj => proj.bullets) || [])
+  ].map(b => b.replace(/<[^>]*>/g, '')); // Strip HTML tags
+
+  if (allBullets.length === 0) {
+    return {
+      structureVariation: 50,
+      sentenceLengthVariation: 50,
+      formulaicBulletPercentage: 0,
+      aiTellsFound: [],
+      overallHumanScore: 50
+    };
+  }
+
+  // 1. Sentence length variation (coefficient of variation)
+  // Human CVs typically 25-45%, AI is typically 10-20%
+  const lengths = allBullets.map(b => b.length);
+  const meanLen = lengths.reduce((a, b) => a + b, 0) / lengths.length;
+  const stdDev = Math.sqrt(lengths.reduce((sum, l) => sum + (l - meanLen) ** 2, 0) / lengths.length);
+  const cv = meanLen > 0 ? (stdDev / meanLen) * 100 : 0;
+  const sentenceLengthVariation = Math.min(100, Math.round(cv * 3));
+
+  // 2. Formulaic bullet detection: starts with past-tense verb AND ends with metric
+  const resultEndingPattern = /(?:resulting in|achieving|saving|reducing|increasing|improving|leading to|generating|driving|cutting|growing|boosting)\s+.*\d/i;
+  const verbStartPattern = /^[A-Z][a-z]+(?:ed|ted|ied|ned|led|zed|sed|ged|red|ked|ded|ped|med|fed|ved|wed|yed|xed)\s/;
+  let formulaicCount = 0;
+  allBullets.forEach(b => {
+    const startsWithVerb = verbStartPattern.test(b);
+    const endsWithResultMetric = resultEndingPattern.test(b);
+    if (startsWithVerb && endsWithResultMetric) {
+      formulaicCount++;
+    }
+  });
+  const formulaicBulletPercentage = Math.round((formulaicCount / allBullets.length) * 100);
+
+  // 3. AI tells detection
+  const aiTells = [
+    'spearheaded', 'orchestrated', 'pioneered', 'leveraged',
+    'synergy', 'paradigm', 'cutting-edge', 'best-in-class',
+    'unparalleled', 'robust solutions', 'innovative solutions',
+    'strategic initiatives', 'dynamic environment', 'thought leadership',
+    'comprehensive understanding', 'harnessed', 'championed',
+    'revolutionized', 'architected', 'catalyzed', 'holistic approach',
+    'seamlessly', 'instrumental in', 'pivotal role', 'proactively'
+  ];
+  const resumeTextLower = allBullets.join(' ').toLowerCase();
+  const aiTellsFound = aiTells.filter(tell => resumeTextLower.includes(tell));
+
+  // 4. Structure variation - consecutive bullets with same verb or same pattern
+  const starterWords = allBullets.map(b => b.split(/\s+/)[0]?.toLowerCase());
+  let consecutiveSameVerb = 0;
+  for (let i = 1; i < starterWords.length; i++) {
+    if (starterWords[i] === starterWords[i - 1]) {
+      consecutiveSameVerb++;
+    }
+  }
+  const structureVariation = Math.round(
+    100 - (consecutiveSameVerb / Math.max(starterWords.length - 1, 1)) * 100
+  );
+
+  // Composite score
+  const overallHumanScore = Math.round(
+    sentenceLengthVariation * 0.25 +
+    (100 - formulaicBulletPercentage) * 0.35 +
+    structureVariation * 0.20 +
+    (aiTellsFound.length === 0 ? 100 : Math.max(0, 100 - aiTellsFound.length * 20)) * 0.20
+  );
+
+  return {
+    structureVariation,
+    sentenceLengthVariation,
+    formulaicBulletPercentage,
+    aiTellsFound,
+    overallHumanScore
+  };
+}
+
 export function analyzeATSCompatibility(
   resume: BaseResume,
   jobDescription: JobDescription
@@ -404,6 +491,23 @@ function calculateContentQuality(resume: BaseResume, jobDescription: JobDescript
     }
   }
 
+  // "Above the fold" keyword density - ATS systems weight the top of the resume more heavily
+  const aboveTheFold = [
+    resume.summary || '',
+    ...(resume.experience[0]?.bullets || [])
+  ].join(' ').toLowerCase();
+
+  const topKeywords = [...new Set([...jobDescription.requiredSkills, ...jobDescription.extractedKeywords])]
+    .slice(0, 10)
+    .map(k => k.toLowerCase());
+
+  const foundInATF = topKeywords.filter(kw => aboveTheFold.includes(kw)).length;
+  if (foundInATF >= 5) {
+    bonusPoints += 10;
+  } else if (foundInATF >= 3) {
+    bonusPoints += 5;
+  }
+
   return Math.max(Math.min(score + bonusPoints, 100), 0);
 }
 
@@ -500,6 +604,40 @@ function generateSuggestions(
 
   if (missingHighPriority.length > 0 && suggestions.length < 5) {
     suggestions.push(`💡 Consider incorporating these terms naturally: ${missingHighPriority.map(k => capitalizeWithAcronyms(k)).join(', ')}`);
+  }
+
+  // Above-the-fold keyword density check
+  const summaryAndFirstRole = [
+    resume.summary || '',
+    ...(resume.experience[0]?.bullets || [])
+  ].join(' ').toLowerCase();
+  const topKeywords = jobDescription.requiredSkills.slice(0, 5);
+  const foundInTop = topKeywords.filter(kw => summaryAndFirstRole.includes(kw.toLowerCase())).length;
+  if (foundInTop < 3 && topKeywords.length >= 3) {
+    suggestions.push('🎯 Add 3-5 key skills from the JD into your summary and most recent role - ATS systems weight the top of your resume more heavily');
+  }
+
+  // Bullet density check
+  resume.experience.forEach(exp => {
+    if (exp.bullets.length > 8) {
+      suggestions.push(`📋 "${exp.title}" has ${exp.bullets.length} bullets - consider trimming to 5-6 for recent roles, 3-4 for older. Long sections can be truncated by ATS`);
+    }
+  });
+
+  if (resume.experience.length >= 2) {
+    const firstRoleBullets = resume.experience[0].bullets.length;
+    const secondRoleBullets = resume.experience[1].bullets.length;
+    if (firstRoleBullets < secondRoleBullets) {
+      suggestions.push('📋 Your most recent role has fewer bullets than an older role - expand your latest position, recruiters and ATS focus on recent experience');
+    }
+  }
+
+  // Resume length check
+  const resumeWords = getResumeText(resume).split(/\s+/).length;
+  if (resumeWords > 900) {
+    suggestions.push(`📄 Your resume is lengthy (~${Math.round(resumeWords / 100) * 100} words). Most ATS systems parse 1-2 pages best. Consider trimming older roles to 3 bullets each`);
+  } else if (resumeWords < 300) {
+    suggestions.push(`📄 Your resume is very short (~${resumeWords} words). Add more detail to experience bullets to improve keyword density`);
   }
 
   // Limit suggestions to most impactful

@@ -62,29 +62,29 @@ Do NOT add these words as skills or competencies. Instead, reframe 3-5 bullets t
 
 **TRANSFORMATION EXAMPLES (MULTI-INDUSTRY)**:
 
-Pharma/Regulatory - JD mentions "regulatory submissions" and "cross-functional":
+Pharma/Regulatory - JD mentions "regulatory submissions" and "cross-functional" (context-first structure):
 - BEFORE: "Prepared documents for FDA"
-- AFTER: "Authored 15+ regulatory submissions to FDA, collaborating with CMC and clinical teams to achieve first-cycle approval for 3 products"
+- AFTER: "As the lead regulatory writer, authored 15+ FDA submissions with CMC and clinical teams - all 3 achieved first-cycle approval"
 
-Finance - JD mentions "financial modeling" and "stakeholder communication":
+Finance - JD mentions "financial modeling" and "stakeholder communication" (parenthetical metric):
 - BEFORE: "Created financial reports for management"
-- AFTER: "Built financial models for 3 business units ($50M+ combined revenue), presenting quarterly forecasts to C-suite that informed $5M investment decisions"
+- AFTER: "Built the quarterly forecast model for 3 business units ($50M+ combined), which C-suite used to greenlight $5M in new investments"
 
-Tech - JD mentions "scalable systems" and "mentoring":
+Tech - JD mentions "scalable systems" and "mentoring" (standard structure):
 - BEFORE: "Developed backend services"
 - AFTER: "Designed scalable microservices handling 50K requests/sec, mentoring 4 engineers on distributed system patterns"
 
-Marketing - JD mentions "data-driven decisions" and "campaign optimization":
+Marketing - JD mentions "data-driven decisions" and "campaign optimization" (compound structure):
 - BEFORE: "Managed social media campaigns"
-- AFTER: "Optimized 12 digital campaigns using A/B testing and analytics, increasing conversion rate by 35% and reducing CPA by 20%"
+- AFTER: "Ran 12 digital campaigns end-to-end using A/B testing and analytics, lifting conversion 35% and cutting CPA by 20%"
 
-HR - JD mentions "talent acquisition" and "process improvement":
+HR - JD mentions "talent acquisition" and "process improvement" (result-first structure):
 - BEFORE: "Handled recruiting for the company"
-- AFTER: "Redesigned talent acquisition pipeline for 3 departments, reducing time-to-hire from 45 to 28 days while improving offer acceptance rate to 92%"
+- AFTER: "Cut time-to-hire from 45 to 28 days by redesigning the talent acquisition pipeline for 3 departments, with offer acceptance hitting 92%"
 
-Projects - JD mentions "automation" and "data pipeline":
+Projects - JD mentions "automation" and "data pipeline" (short punchy):
 - BEFORE: "Built a tool to automate reports"
-- AFTER: "Developed automated reporting pipeline processing 10K+ records daily, reducing manual effort by 15 hrs/week and eliminating data entry errors"
+- AFTER: "Built an automated reporting pipeline - 10K+ records/day, 15 hrs/week saved, zero manual data entry errors"
 
 **STRONG VERBS (use these, vary per role)**:
 Designed, Built, Implemented, Improved, Reduced, Increased, Led, Delivered, Analyzed, Optimized,
@@ -94,7 +94,9 @@ Accelerated, Consolidated, Transformed, Launched, Resolved, Standardized, Evalua
 **FORBIDDEN LANGUAGE (instant recruiter red flag)**:
 - AI buzzwords: "leveraged", "pioneered", "unparalleled", "comprehensive", "robust", "synergy",
   "paradigm", "spearheaded", "orchestrated", "cutting-edge", "passionate", "innovative solutions",
-  "strategic initiatives", "dynamic environment", "best-in-class", "thought leadership"
+  "strategic initiatives", "dynamic environment", "best-in-class", "thought leadership",
+  "harnessed", "championed", "revolutionized", "architected", "catalyzed", "key stakeholders",
+  "holistic approach", "seamlessly", "proactively", "instrumental in", "pivotal role"
 - Weak verbs: worked, helped, assisted, was responsible for, participated in, involved in
 - Vague claims: "improved efficiency", "enhanced productivity" (without numbers)
 - Keyword stuffing: forcing the same JD term into multiple bullets - use each keyword ONCE
@@ -106,6 +108,7 @@ Accelerated, Consolidated, Transformed, Launched, Resolved, Standardized, Evalua
 - **EACH keyword should appear AT MOST ONCE in bullet points** - pick the single best bullet where it fits most naturally
 - Do NOT scatter the same keyword across multiple bullets - one strong placement beats three forced ones
 - Place keywords where they naturally fit into achievement context - as part of the work description, NOT appended as tags
+- **ABOVE THE FOLD**: Place 3-5 of the most important JD keywords in the summary AND first role's bullets. ATS systems weight the top 1/3 of the resume more heavily
 - Summary: 3-4 keywords naturally integrated
 - Experience: distribute different keywords across roles, concentrate on most recent role
 - Skills/Core Competencies: the only place where listing keywords without narrative context is acceptable
@@ -117,6 +120,37 @@ Accelerated, Consolidated, Transformed, Launched, Resolved, Standardized, Evalua
 - WRONG: "Implemented solutions utilizing cross-functional collaboration and stakeholder management" (keyword salad)
 - RIGHT: "Analyzed 3 years of patient data to identify enrollment trends, reducing trial delays by 25%" (keyword is the actual work)
 - RIGHT: Each keyword appears once, in the bullet where it's most relevant and impactful
+
+**HUMAN WRITING PATTERNS (CRITICAL - DEFEATS AI DETECTION)**:
+
+Sentence Structure Variation - DO NOT use [Verb]+[What]+[Result] for every bullet:
+- At least 30% of bullets MUST use a different structure. Pick 2-3 per role:
+  * Context-first: "As the sole analyst for 3 product lines, rebuilt the forecasting model, cutting variance by 18%"
+  * Result-first: "Cut onboarding time from 3 weeks to 5 days by redesigning the training curriculum for 200+ new hires"
+  * Compound: "Managed $4M vendor portfolio and negotiated 3 renewals, saving $280K annually"
+  * Short punchy: "Promoted to lead within 8 months - youngest in department history"
+
+Sentence Length Variation:
+- Mix deliberately: some 60-80 chars (short punch), most 90-130 chars (standard), a few 140-160 chars (detailed)
+- Include at least 2 notably short bullets per role (under 80 chars)
+- AI writes uniform 100-120 char bullets. Humans vary between 50 and 160 chars naturally
+
+Metric Placement - vary where numbers appear:
+- Beginning: "12 regulatory submissions to FDA completed with first-cycle approval"
+- Middle: "Redesigned the hiring pipeline across 4 departments, cutting time-to-hire to 28 days"
+- End: "Streamlined vendor onboarding, reducing cycle time by 35%"
+- Parenthetical: "Managed client accounts ($3M+ ARR) and drove renewals for 15+ enterprise clients"
+- Do NOT put every metric at the end after "resulting in" or "achieving"
+
+Specificity over Generality:
+- Name REAL things: specific software versions, team names, report names, process names
+- WRONG: "Improved the reporting process"
+- RIGHT: "Rebuilt the weekly P&L variance report in Hyperion, cutting close cycle from 8 to 5 days"
+
+Avoid AI Tells:
+- Never use 3+ consecutive bullets with the same grammatical pattern
+- Do NOT make every bullet end with a metric clause
+- Occasional imperfect but authentic phrasing: "Ran point on" > "Orchestrated"
 
 **SUMMARY GUIDELINES**:
 - Format: "[Title] with X+ years of experience in [2-3 key areas from JD]. [Achievement with metric]. [One more strength with scope]."
