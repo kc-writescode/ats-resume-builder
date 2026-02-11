@@ -16,6 +16,7 @@ export default function MasterPage() {
     const [isLoggingIn, setIsLoggingIn] = useState(false);
     const [mounted, setMounted] = useState(false);
     const [activeTab, setActiveTab] = useState<'users' | 'leads'>('users');
+    const [menuOpen, setMenuOpen] = useState(false);
 
     // User management state
     const [users, setUsers] = useState<Profile[]>([]);

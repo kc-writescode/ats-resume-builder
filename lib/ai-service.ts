@@ -322,13 +322,13 @@ function detectRoleTypeAndCategories(jobTitle: string, jobText: string): string 
 
   // Frontend Engineering
   if (/frontend|front[\s-]?end|react|angular|vue|next\.?js|typescript|css|tailwind|ui engineer|web developer/i.test(combined) &&
-      !/backend|full[\s-]?stack/i.test(combined)) {
+    !/backend|full[\s-]?stack/i.test(combined)) {
     return "'Frontend Frameworks', 'Languages & Styling', 'Testing & Build Tools', 'State Management', 'Performance & Accessibility'";
   }
 
   // Backend Engineering
   if (/backend|back[\s-]?end|api|microservices|node\.?js|django|flask|spring|golang|rust|server[\s-]?side/i.test(combined) &&
-      !/frontend|full[\s-]?stack/i.test(combined)) {
+    !/frontend|full[\s-]?stack/i.test(combined)) {
     return "'Backend Frameworks', 'Programming Languages', 'Databases', 'Cloud & Infrastructure', 'API Design & Architecture'";
   }
 
@@ -386,11 +386,60 @@ function detectRoleTypeAndCategories(jobTitle: string, jobText: string): string 
   return "'Technical Skills', 'Tools & Platforms', 'Methodologies', 'Industry Knowledge', 'Professional Skills'";
 }
 
+// Strip unnecessary fields from base resume to reduce token usage
+// Removes: IDs, location (kept from base during merge), current flag, skillCategories (AI regenerates),
+// personal details AI doesn't need (email, phone, etc.), empty optionals
+function slimResumeForAI(resume: BaseResume): Record<string, any> {
+  return {
+    personal: { name: resume.personal.name },
+    summary: resume.summary,
+    experience: resume.experience.map(exp => ({
+      title: exp.title,
+      company: exp.company,
+      startDate: exp.startDate,
+      endDate: exp.endDate,
+      bullets: exp.bullets
+    })),
+    education: resume.education.map(edu => ({
+      degree: edu.degree,
+      institution: edu.institution,
+      graduationDate: edu.graduationDate,
+      ...(edu.gpa ? { gpa: edu.gpa } : {})
+    })),
+    skills: resume.skills,
+    ...(resume.projects?.length ? {
+      projects: resume.projects.map(p => ({
+        name: p.name,
+        description: p.description,
+        bullets: p.bullets
+      }))
+    } : {}),
+    ...(resume.certifications?.length ? { certifications: resume.certifications } : {})
+  };
+}
+
+// Trim job description to remove non-essential sections (benefits, EEO, about us)
+// Keeps role requirements, responsibilities, and qualifications
+function trimJobDescription(text: string, maxChars: number = 3000): string {
+  const cleaned = text
+    .replace(/(?:equal\s+opportunity|eeo|we\s+are\s+an?\s+equal|diversity\s+(?:and|&)\s+inclusion)[\s\S]*/i, '')
+    .replace(/(?:benefits|perks|what\s+we\s+offer)[:\s][\s\S]*?(?=\n\n|\n[A-Z]|$)/gi, '')
+    .replace(/(?:about\s+(?:us|the\s+company))[:\s][\s\S]*?(?=\n\n|\n[A-Z]|$)/gi, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  return cleaned.length > maxChars ? cleaned.slice(0, maxChars) : cleaned;
+}
+
 export async function generateTailoredResume(
   baseResume: BaseResume,
   jobDescription: JobDescription
 ): Promise<BaseResume> {
   const skillCategories = detectRoleTypeAndCategories(jobDescription.jobTitle, jobDescription.text);
+
+  // Token optimization: slim resume (strip IDs, unused fields) and trim JD (remove boilerplate)
+  const slimResume = slimResumeForAI(baseResume);
+  const trimmedJDText = trimJobDescription(jobDescription.text);
 
   // Extract key phrases from job description for targeted reframing
   const jdPhrases = jobDescription.text
@@ -407,12 +456,12 @@ export async function generateTailoredResume(
   const softSkills = extractSoftSkills(jobDescription.text);
 
   const userPrompt = `**BASE RESUME:**
-${JSON.stringify(baseResume, null, 2)}
+${JSON.stringify(slimResume)}
 
 **TARGET JOB:** ${jobDescription.jobTitle} at ${jobDescription.companyName}
 
 **JOB DESCRIPTION:**
-${jobDescription.text}
+${trimmedJDText}
 
 **KEYWORDS TO INTEGRATE (weave into achievement context, don't force):**
 ${keywordsToInclude.slice(0, 15).map((kw, i) => `${i + 1}. ${kw}`).join('\n')}
@@ -468,7 +517,7 @@ Transform every bullet into: [Action Verb] + [What + JD context] + [Measurable R
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        max_tokens: 8000,
+        max_tokens: 6000,
         system: SYSTEM_PROMPT,
         messages: [
           {
@@ -706,6 +755,10 @@ export async function generateTailoredResumeStreaming(
 ): Promise<BaseResume> {
   const skillCategories = detectRoleTypeAndCategories(jobDescription.jobTitle, jobDescription.text);
 
+  // Token optimization: slim resume (strip IDs, unused fields) and trim JD (remove boilerplate)
+  const slimResume = slimResumeForAI(baseResume);
+  const trimmedJDText = trimJobDescription(jobDescription.text);
+
   const jdPhrases = jobDescription.text
     .split(/[.!?\n]/)
     .filter(s => s.trim().length > 20)
@@ -720,12 +773,12 @@ export async function generateTailoredResumeStreaming(
   const softSkills = extractSoftSkills(jobDescription.text);
 
   const userPrompt = `**BASE RESUME:**
-${JSON.stringify(baseResume, null, 2)}
+${JSON.stringify(slimResume)}
 
 **TARGET JOB:** ${jobDescription.jobTitle} at ${jobDescription.companyName}
 
 **JOB DESCRIPTION:**
-${jobDescription.text}
+${trimmedJDText}
 
 **KEYWORDS TO INTEGRATE (weave into achievement context, don't force):**
 ${keywordsToInclude.slice(0, 15).map((kw, i) => `${i + 1}. ${kw}`).join('\n')}
@@ -783,7 +836,7 @@ Transform every bullet into: [Action Verb] + [What + JD context] + [Measurable R
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        max_tokens: 8000,
+        max_tokens: 6000,
         system: SYSTEM_PROMPT,
         messages: [
           {

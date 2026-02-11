@@ -101,7 +101,9 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-5-20250929',
         max_tokens: safeMaxTokens,
-        system,
+        // Enable prompt caching: system prompt (~3500 tokens) is cached for 5 min,
+        // subsequent requests pay only 10% of input token cost for cached portion
+        system: system ? [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }] : undefined,
         messages,
         stream: true
       })
