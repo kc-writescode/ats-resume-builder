@@ -633,14 +633,33 @@ Transform every bullet into: [Action Verb] + [What + JD context] + [Measurable R
     }
 
     // Check if a skill is already covered by any categorized skill (substring/fuzzy match)
-    // e.g., "Amazon SageMaker" is covered if "SageMaker" already exists in a category
+    // Handles vendor prefix variations: "AWS SageMaker" vs "Amazon SageMaker" → both normalize to "sagemaker"
     function isSkillAlreadyCovered(skill: string, existingSkills: string[]): boolean {
       const normalized = skill.toLowerCase().trim();
-      return existingSkills.some(existing =>
-        existing === normalized ||
-        existing.includes(normalized) ||
-        normalized.includes(existing)
-      );
+      const vendorPrefixes = ['aws', 'amazon', 'google', 'microsoft', 'azure', 'ibm', 'oracle'];
+
+      // Strip vendor prefix for comparison
+      const stripPrefix = (s: string): string => {
+        const words = s.split(/\s+/);
+        if (words.length > 1 && vendorPrefixes.includes(words[0])) {
+          return words.slice(1).join(' ');
+        }
+        return s;
+      };
+
+      const strippedNormalized = stripPrefix(normalized);
+
+      return existingSkills.some(existing => {
+        const strippedExisting = stripPrefix(existing);
+        return (
+          existing === normalized ||
+          existing.includes(normalized) ||
+          normalized.includes(existing) ||
+          strippedExisting === strippedNormalized ||
+          strippedExisting.includes(strippedNormalized) ||
+          strippedNormalized.includes(strippedExisting)
+        );
+      });
     }
 
     // Deduplicate skills globally across categories
@@ -981,13 +1000,32 @@ Transform every bullet into: [Action Verb] + [What + JD context] + [Measurable R
     }
 
     // Check if a skill is already covered by any categorized skill (substring/fuzzy match)
+    // Handles vendor prefix variations: "AWS SageMaker" vs "Amazon SageMaker" → both normalize to "sagemaker"
     function isSkillAlreadyCoveredStream(skill: string, existingSkills: string[]): boolean {
       const normalized = skill.toLowerCase().trim();
-      return existingSkills.some(existing =>
-        existing === normalized ||
-        existing.includes(normalized) ||
-        normalized.includes(existing)
-      );
+      const vendorPrefixes = ['aws', 'amazon', 'google', 'microsoft', 'azure', 'ibm', 'oracle'];
+
+      const stripPrefix = (s: string): string => {
+        const words = s.split(/\s+/);
+        if (words.length > 1 && vendorPrefixes.includes(words[0])) {
+          return words.slice(1).join(' ');
+        }
+        return s;
+      };
+
+      const strippedNormalized = stripPrefix(normalized);
+
+      return existingSkills.some(existing => {
+        const strippedExisting = stripPrefix(existing);
+        return (
+          existing === normalized ||
+          existing.includes(normalized) ||
+          normalized.includes(existing) ||
+          strippedExisting === strippedNormalized ||
+          strippedExisting.includes(strippedNormalized) ||
+          strippedNormalized.includes(strippedExisting)
+        );
+      });
     }
 
     const seenSkillsSet = new Set<string>();
