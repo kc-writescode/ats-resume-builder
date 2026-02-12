@@ -620,16 +620,27 @@ Transform every bullet into: [Action Verb] + [What + JD context] + [Measurable R
       tailoredCategories = [...tailoredData.skillCategories];
     }
 
-    // Safely extract generated skills for comparison
-    const tailoredSkillsSet = new Set<string>();
+    // Safely extract generated skills for comparison (using substring matching)
+    const tailoredSkillsList: string[] = [];
     try {
       tailoredCategories.forEach(cat => {
         if (cat && Array.isArray(cat.skills)) {
-          cat.skills.forEach((s: string) => tailoredSkillsSet.add(String(s).toLowerCase().trim()));
+          cat.skills.forEach((s: string) => tailoredSkillsList.push(String(s).toLowerCase().trim()));
         }
       });
     } catch (e) {
       console.warn('Error processing tailored skills:', e);
+    }
+
+    // Check if a skill is already covered by any categorized skill (substring/fuzzy match)
+    // e.g., "Amazon SageMaker" is covered if "SageMaker" already exists in a category
+    function isSkillAlreadyCovered(skill: string, existingSkills: string[]): boolean {
+      const normalized = skill.toLowerCase().trim();
+      return existingSkills.some(existing =>
+        existing === normalized ||
+        existing.includes(normalized) ||
+        normalized.includes(existing)
+      );
     }
 
     // Deduplicate skills globally across categories
@@ -649,9 +660,10 @@ Transform every bullet into: [Action Verb] + [What + JD context] + [Measurable R
     }).filter(cat => cat.skills && cat.skills.length > 0);
 
     // Identify skills from base resume that are missing in the tailored categories
+    // Uses substring matching to catch "Amazon SageMaker" vs "SageMaker" duplicates
     const baseSkills = Array.isArray(baseResume.skills) ? baseResume.skills : [];
     const missingBaseSkills = baseSkills.filter(skill =>
-      !tailoredSkillsSet.has(String(skill).toLowerCase().trim())
+      !isSkillAlreadyCovered(String(skill), tailoredSkillsList)
     );
 
     if (missingBaseSkills.length > 0) {
@@ -659,17 +671,25 @@ Transform every bullet into: [Action Verb] + [What + JD context] + [Measurable R
       if (uniqueMissing.length > 0) {
         // Find a generic category to dump skills into if we can't classify them
         let targetCategory = tailoredCategories.find(c =>
-          ['tools', 'technical skills', 'technologies', 'other', 'analytical & development tools'].includes(c.category.toLowerCase())
+          ['tools', 'additional tools & technologies', 'technologies', 'other', 'analytical & development tools'].includes(c.category.toLowerCase())
         );
 
         if (!targetCategory) {
-          // Create one if it doesn't exist
-          targetCategory = { category: 'Technical Skills', skills: [] };
+          // Create one - name it differently from section heading "Technical Skills"
+          targetCategory = { category: 'Additional Tools & Technologies', skills: [] };
           tailoredCategories.push(targetCategory);
         }
 
-        // Add missing skills to this target category
-        targetCategory.skills = Array.from(new Set([...targetCategory.skills, ...uniqueMissing]));
+        // Add missing skills, but skip any that are substring-covered by existing categorized skills
+        const allCategorizedSkills = tailoredCategories.flatMap(c =>
+          (c.skills || []).map((s: string) => s.toLowerCase().trim())
+        );
+        const trulyMissing = uniqueMissing.filter(skill =>
+          !isSkillAlreadyCovered(String(skill), allCategorizedSkills)
+        );
+        if (trulyMissing.length > 0) {
+          targetCategory.skills = Array.from(new Set([...targetCategory.skills, ...trulyMissing]));
+        }
       }
     }
 
@@ -679,7 +699,7 @@ Transform every bullet into: [Action Verb] + [What + JD context] + [Measurable R
     // Ensure we never return empty categories if we have skills
     if (tailoredCategories.length === 0 && baseSkills.length > 0) {
       tailoredCategories.push({
-        category: 'Technical Skills',
+        category: 'Additional Tools & Technologies',
         skills: baseSkills
       });
     }
@@ -948,15 +968,26 @@ Transform every bullet into: [Action Verb] + [What + JD context] + [Measurable R
       tailoredCategories = [...tailoredData.skillCategories];
     }
 
-    const tailoredSkillsSet = new Set<string>();
+    // Safely extract generated skills for comparison (using substring matching)
+    const tailoredSkillsList: string[] = [];
     try {
       tailoredCategories.forEach(cat => {
         if (cat && Array.isArray(cat.skills)) {
-          cat.skills.forEach((s: string) => tailoredSkillsSet.add(String(s).toLowerCase().trim()));
+          cat.skills.forEach((s: string) => tailoredSkillsList.push(String(s).toLowerCase().trim()));
         }
       });
     } catch (e) {
       console.warn('Error processing tailored skills:', e);
+    }
+
+    // Check if a skill is already covered by any categorized skill (substring/fuzzy match)
+    function isSkillAlreadyCoveredStream(skill: string, existingSkills: string[]): boolean {
+      const normalized = skill.toLowerCase().trim();
+      return existingSkills.some(existing =>
+        existing === normalized ||
+        existing.includes(normalized) ||
+        normalized.includes(existing)
+      );
     }
 
     const seenSkillsSet = new Set<string>();
@@ -973,24 +1004,34 @@ Transform every bullet into: [Action Verb] + [What + JD context] + [Measurable R
       return cat;
     }).filter(cat => cat.skills && cat.skills.length > 0);
 
+    // Uses substring matching to catch "Amazon SageMaker" vs "SageMaker" duplicates
     const baseSkills = Array.isArray(baseResume.skills) ? baseResume.skills : [];
     const missingBaseSkills = baseSkills.filter(skill =>
-      !tailoredSkillsSet.has(String(skill).toLowerCase().trim())
+      !isSkillAlreadyCoveredStream(String(skill), tailoredSkillsList)
     );
 
     if (missingBaseSkills.length > 0) {
       const uniqueMissing = Array.from(new Set(missingBaseSkills));
       if (uniqueMissing.length > 0) {
         let targetCategory = tailoredCategories.find(c =>
-          ['tools', 'technical skills', 'technologies', 'other', 'analytical & development tools'].includes(c.category.toLowerCase())
+          ['tools', 'additional tools & technologies', 'technologies', 'other', 'analytical & development tools'].includes(c.category.toLowerCase())
         );
 
         if (!targetCategory) {
-          targetCategory = { category: 'Technical Skills', skills: [] };
+          targetCategory = { category: 'Additional Tools & Technologies', skills: [] };
           tailoredCategories.push(targetCategory);
         }
 
-        targetCategory.skills = Array.from(new Set([...targetCategory.skills, ...uniqueMissing]));
+        // Add missing skills, but skip any that are substring-covered by existing categorized skills
+        const allCategorizedSkills = tailoredCategories.flatMap(c =>
+          (c.skills || []).map((s: string) => s.toLowerCase().trim())
+        );
+        const trulyMissing = uniqueMissing.filter(skill =>
+          !isSkillAlreadyCoveredStream(String(skill), allCategorizedSkills)
+        );
+        if (trulyMissing.length > 0) {
+          targetCategory.skills = Array.from(new Set([...targetCategory.skills, ...trulyMissing]));
+        }
       }
     }
 
@@ -998,7 +1039,7 @@ Transform every bullet into: [Action Verb] + [What + JD context] + [Measurable R
 
     if (tailoredCategories.length === 0 && baseSkills.length > 0) {
       tailoredCategories.push({
-        category: 'Technical Skills',
+        category: 'Additional Tools & Technologies',
         skills: baseSkills
       });
     }
