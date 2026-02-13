@@ -441,13 +441,6 @@ export async function generateTailoredResume(
   const slimResume = slimResumeForAI(baseResume);
   const trimmedJDText = trimJobDescription(jobDescription.text);
 
-  // Extract key phrases from job description for targeted reframing
-  const jdPhrases = jobDescription.text
-    .split(/[.!?\n]/)
-    .filter(s => s.trim().length > 20)
-    .slice(0, 10)
-    .map(s => s.trim());
-
   // Combine all keywords for explicit inclusion
   const allKeywords = [...new Set([...jobDescription.requiredSkills, ...jobDescription.extractedKeywords])];
   const keywordsToInclude = allKeywords.slice(0, 25);
@@ -468,47 +461,10 @@ ${keywordsToInclude.slice(0, 15).map((kw, i) => `${i + 1}. ${kw}`).join('\n')}
 
 ${softSkills.length > 0 ? `**SOFT SKILLS FROM JD (demonstrate through actions in 3-5 bullets, NOT as listed skills):**\n${softSkills.slice(0, 5).map((s, i) => `${i + 1}. ${s} → show this through a bullet that describes HOW the candidate did something`).join('\n')}` : ''}
 
-**BULLET POINT INSTRUCTIONS (MOST IMPORTANT):**
-Transform every bullet into: [Action Verb] + [What + JD context] + [Measurable Result]
-- **80%+ of bullets MUST contain a number** (%, $, count, time, team size, volume, scale)
-- If the original has no metric, INFER a reasonable one from context (e.g., team size, volume handled, % improvement)
-- Embed soft skills into the HOW: "Collaborated with 5 teams to..." / "Mentored 3 analysts on..."
-- Use the JD's exact terminology where the candidate's work genuinely aligns
-- NEVER start 2 consecutive bullets with the same verb
-- For TECH ROLES: Name specific technologies from the JD in bullets where the candidate used them
-  Example: "Built data pipelines using Apache Spark and Airflow, processing 2M+ records daily"
-  NOT: "Built data pipelines" (missing tech stack)
-
-**PROJECT BULLETS - SAME STANDARD AS EXPERIENCE:**
-- Every project bullet must show an outcome/result relevant to the target role
-- Include metrics: data volume, users served, performance gains, time saved, accuracy achieved
-- Connect the project to JD requirements through the technologies used and problems solved
-
-**NO KEYWORD REPETITION (CRITICAL):**
-- Each JD keyword/skill should appear in AT MOST ONE bullet point - pick the BEST fit
-- Do NOT repeat the same keyword across multiple roles or bullets
-- Keywords must be part of the achievement description, NOT appended as tags
-  WRONG: "Managed team operations, utilizing data analysis and stakeholder management"
-  RIGHT: "Analyzed 18 months of operational data to identify bottlenecks, reducing cycle time by 30%"
-- A bullet should read as a genuine achievement - if you removed the keyword, it should still make sense
-
-**CORE COMPETENCIES (STRICT - NO CREATIVE ADDITIONS):**
-- ONLY include skills that appear in BOTH the base resume AND the job description
-- Do NOT invent skills the candidate doesn't have evidence of
-- Every competency must be a concrete, testable skill - "Can this be asked in an interview?"
-- Max 8-10 competencies. Capitalize acronyms properly.
-- NEVER include: Innovation, Leadership, Communication, Excel, Word, Qualification, Compensation, Logistics, Recruiting, Operations, Safety, Automation, Problem Solving, Detail Oriented
-
-**SKILLS CATEGORIES:**
-- Organize into: ${skillCategories}
-- Include base resume skills + ONLY JD skills the candidate plausibly has
-- NEVER add skills with zero evidence from the base resume
-
-**SUMMARY:** 2-3 sentences for "${jobDescription.jobTitle}" role. Include 3-4 hard skills + demonstrate 1 soft skill through an achievement mention.
-
-**KEYWORD TRACKING:** Provide keywordInsights showing where each keyword was placed.
-
-**OUTPUT**: Complete valid JSON. Bullets 80-150 chars each. Preserve ALL original bullet count.`;
+Follow ALL system prompt rules for bullet points, keywords, core competencies, skills, and summary.
+Organize skills into: ${skillCategories}
+Provide keywordInsights showing where each keyword was placed.
+Return complete valid JSON. Bullets 80-150 chars each. Preserve ALL original bullet count.`;
 
   try {
     const response = await fetch('/api/generate', {
@@ -798,12 +754,6 @@ export async function generateTailoredResumeStreaming(
   const slimResume = slimResumeForAI(baseResume);
   const trimmedJDText = trimJobDescription(jobDescription.text);
 
-  const jdPhrases = jobDescription.text
-    .split(/[.!?\n]/)
-    .filter(s => s.trim().length > 20)
-    .slice(0, 10)
-    .map(s => s.trim());
-
   // Combine all keywords for explicit inclusion
   const allKeywords = [...new Set([...jobDescription.requiredSkills, ...jobDescription.extractedKeywords])];
   const keywordsToInclude = allKeywords.slice(0, 25);
@@ -824,47 +774,10 @@ ${keywordsToInclude.slice(0, 15).map((kw, i) => `${i + 1}. ${kw}`).join('\n')}
 
 ${softSkills.length > 0 ? `**SOFT SKILLS FROM JD (demonstrate through actions in 3-5 bullets, NOT as listed skills):**\n${softSkills.slice(0, 5).map((s, i) => `${i + 1}. ${s} → show this through a bullet that describes HOW the candidate did something`).join('\n')}` : ''}
 
-**BULLET POINT INSTRUCTIONS (MOST IMPORTANT):**
-Transform every bullet into: [Action Verb] + [What + JD context] + [Measurable Result]
-- **80%+ of bullets MUST contain a number** (%, $, count, time, team size, volume, scale)
-- If the original has no metric, INFER a reasonable one from context (e.g., team size, volume handled, % improvement)
-- Embed soft skills into the HOW: "Collaborated with 5 teams to..." / "Mentored 3 analysts on..."
-- Use the JD's exact terminology where the candidate's work genuinely aligns
-- NEVER start 2 consecutive bullets with the same verb
-- For TECH ROLES: Name specific technologies from the JD in bullets where the candidate used them
-  Example: "Built data pipelines using Apache Spark and Airflow, processing 2M+ records daily"
-  NOT: "Built data pipelines" (missing tech stack)
-
-**PROJECT BULLETS - SAME STANDARD AS EXPERIENCE:**
-- Every project bullet must show an outcome/result relevant to the target role
-- Include metrics: data volume, users served, performance gains, time saved, accuracy achieved
-- Connect the project to JD requirements through the technologies used and problems solved
-
-**NO KEYWORD REPETITION (CRITICAL):**
-- Each JD keyword/skill should appear in AT MOST ONE bullet point - pick the BEST fit
-- Do NOT repeat the same keyword across multiple roles or bullets
-- Keywords must be part of the achievement description, NOT appended as tags
-  WRONG: "Managed team operations, utilizing data analysis and stakeholder management"
-  RIGHT: "Analyzed 18 months of operational data to identify bottlenecks, reducing cycle time by 30%"
-- A bullet should read as a genuine achievement - if you removed the keyword, it should still make sense
-
-**CORE COMPETENCIES (STRICT - NO CREATIVE ADDITIONS):**
-- ONLY include skills that appear in BOTH the base resume AND the job description
-- Do NOT invent skills the candidate doesn't have evidence of
-- Every competency must be a concrete, testable skill - "Can this be asked in an interview?"
-- Max 8-10 competencies. Capitalize acronyms properly.
-- NEVER include: Innovation, Leadership, Communication, Excel, Word, Qualification, Compensation, Logistics, Recruiting, Operations, Safety, Automation, Problem Solving, Detail Oriented
-
-**SKILLS CATEGORIES:**
-- Organize into: ${skillCategories}
-- Include base resume skills + ONLY JD skills the candidate plausibly has
-- NEVER add skills with zero evidence from the base resume
-
-**SUMMARY:** 2-3 sentences for "${jobDescription.jobTitle}" role. Include 3-4 hard skills + demonstrate 1 soft skill through an achievement mention.
-
-**KEYWORD TRACKING:** Provide keywordInsights showing where each keyword was placed.
-
-**OUTPUT**: Complete valid JSON. Bullets 80-150 chars each. Preserve ALL original bullet count.`;
+Follow ALL system prompt rules for bullet points, keywords, core competencies, skills, and summary.
+Organize skills into: ${skillCategories}
+Provide keywordInsights showing where each keyword was placed.
+Return complete valid JSON. Bullets 80-150 chars each. Preserve ALL original bullet count.`;
 
   try {
     onProgress?.({ percentage: 5, stage: 'Connecting to AI service...' });
