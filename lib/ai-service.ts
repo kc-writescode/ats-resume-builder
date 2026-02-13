@@ -179,7 +179,7 @@ Avoid AI Tells:
   "Teamwork", "Collaboration", "Qualification", "Compensation", "Recruiting", "Logistics",
   "Operations", "Manufacturing", "Automation", "Safety", "Problem Solving", "Detail Oriented"
 - Test: "Can this be verified in a technical interview?" If no, don't include it
-- ALWAYS capitalize acronyms: LLM, NLP, SQL, API, AWS, GCP, ETL, ML, AI, FDA, GMP
+- ALWAYS capitalize acronyms: LLM, NLP, SQL, API, AWS, GCP, ETL, ML, AI, FDA, GMP, RBAC, IAM, SSO, HIPAA, GDPR, GAAP, ERP, CRM, CI/CD
 
 **SKILLS CATEGORIES**:
 - Include skills from base resume + ONLY skills from JD the candidate plausibly possesses
@@ -262,6 +262,22 @@ function extractSoftSkills(jobText: string): string[] {
   });
 
   return Array.from(foundSkills).slice(0, 10);
+}
+
+// Detect industry/role type for prompt targeting (keeps model focused on relevant examples)
+function detectRoleType(jobTitle: string, jobText: string): string {
+  const combined = (jobTitle + ' ' + jobText).toLowerCase();
+  if (/regulatory|fda|ema|ich|gxp|gmp|pharma|clinical|drug|medical|healthcare|biologics/i.test(combined)) return 'Pharma/Regulatory';
+  if (/gaap|ifrs|sox|financial|accounting|audit|cpa|tax|treasury|revenue|budget|forecast|reconciliation/i.test(combined)) return 'Finance';
+  if (/generative ai|llm|machine learning|ml|data science|deep learning|nlp|computer vision|mlops/i.test(combined)) return 'Tech/ML';
+  if (/software|developer|engineer|devops|sre|frontend|backend|fullstack|data engineer/i.test(combined)) return 'Tech/Engineering';
+  if (/marketing|seo|sem|brand|digital|content|lead generation|crm|sales/i.test(combined)) return 'Marketing';
+  if (/hr|human resources|talent|recruiting|onboarding|compensation|hris/i.test(combined)) return 'HR';
+  if (/legal|attorney|lawyer|paralegal|contract|litigation|compliance/i.test(combined)) return 'Legal';
+  if (/operations|supply chain|project management|pmp|six sigma|lean|process improvement/i.test(combined)) return 'Operations';
+  if (/product manager|product owner|product management/i.test(combined)) return 'Product';
+  if (/cybersecurity|security engineer|soc|siem|threat|vulnerability/i.test(combined)) return 'Security';
+  return 'General Business';
 }
 
 // Detect role type and return appropriate skill categories
@@ -436,6 +452,7 @@ export async function generateTailoredResume(
   jobDescription: JobDescription
 ): Promise<BaseResume> {
   const skillCategories = detectRoleTypeAndCategories(jobDescription.jobTitle, jobDescription.text);
+  const roleType = detectRoleType(jobDescription.jobTitle, jobDescription.text);
 
   // Token optimization: slim resume (strip IDs, unused fields) and trim JD (remove boilerplate)
   const slimResume = slimResumeForAI(baseResume);
@@ -461,6 +478,7 @@ ${keywordsToInclude.slice(0, 15).map((kw, i) => `${i + 1}. ${kw}`).join('\n')}
 
 ${softSkills.length > 0 ? `**SOFT SKILLS FROM JD (demonstrate through actions in 3-5 bullets, NOT as listed skills):**\n${softSkills.slice(0, 5).map((s, i) => `${i + 1}. ${s} → show this through a bullet that describes HOW the candidate did something`).join('\n')}` : ''}
 
+**ROLE TYPE:** ${roleType} — use the matching industry transformation example from system prompt.
 Follow ALL system prompt rules for bullet points, keywords, core competencies, skills, and summary.
 Organize skills into: ${skillCategories}
 Provide keywordInsights showing where each keyword was placed.
@@ -749,6 +767,7 @@ export async function generateTailoredResumeStreaming(
   onProgress?: (progress: StreamProgress) => void
 ): Promise<BaseResume> {
   const skillCategories = detectRoleTypeAndCategories(jobDescription.jobTitle, jobDescription.text);
+  const roleType = detectRoleType(jobDescription.jobTitle, jobDescription.text);
 
   // Token optimization: slim resume (strip IDs, unused fields) and trim JD (remove boilerplate)
   const slimResume = slimResumeForAI(baseResume);
@@ -774,6 +793,7 @@ ${keywordsToInclude.slice(0, 15).map((kw, i) => `${i + 1}. ${kw}`).join('\n')}
 
 ${softSkills.length > 0 ? `**SOFT SKILLS FROM JD (demonstrate through actions in 3-5 bullets, NOT as listed skills):**\n${softSkills.slice(0, 5).map((s, i) => `${i + 1}. ${s} → show this through a bullet that describes HOW the candidate did something`).join('\n')}` : ''}
 
+**ROLE TYPE:** ${roleType} — use the matching industry transformation example from system prompt.
 Follow ALL system prompt rules for bullet points, keywords, core competencies, skills, and summary.
 Organize skills into: ${skillCategories}
 Provide keywordInsights showing where each keyword was placed.
@@ -1055,10 +1075,56 @@ Return complete valid JSON. Bullets 80-150 chars each. Preserve ALL original bul
   }
 }
 
+// Map of forbidden AI buzzwords → natural replacements
+const AI_BUZZWORD_REPLACEMENTS: [RegExp, string][] = [
+  [/\bleveraged\b/gi, 'used'],
+  [/\bpioneered\b/gi, 'introduced'],
+  [/\bspearheaded\b/gi, 'led'],
+  [/\borchestrated\b/gi, 'coordinated'],
+  [/\bharnessed\b/gi, 'applied'],
+  [/\bchampioned\b/gi, 'promoted'],
+  [/\brevolutionized\b/gi, 'transformed'],
+  [/\barchitected\b/gi, 'designed'],
+  [/\bcatalyzed\b/gi, 'drove'],
+  [/\bseamlessly\b/gi, ''],
+  [/\bproactively\b/gi, ''],
+  [/\bholistic approach\b/gi, 'integrated approach'],
+  [/\binstrumental in\b/gi, 'key to'],
+  [/\bpivotal role\b/gi, 'central role'],
+  [/\bcutting-edge\b/gi, 'modern'],
+  [/\bbest-in-class\b/gi, 'top-performing'],
+  [/\bunparalleled\b/gi, 'strong'],
+  [/\brobust\s+solutions?\b/gi, 'reliable solutions'],
+  [/\binnovative solutions?\b/gi, 'effective solutions'],
+  [/\bstrategic initiatives?\b/gi, 'key initiatives'],
+  [/\bdynamic environment\b/gi, 'fast-paced environment'],
+  [/\bthought leadership\b/gi, 'subject matter expertise'],
+  [/\bsynerg\w+\b/gi, 'collaboration'],
+  [/\bparadigm\b/gi, 'model'],
+];
+
+function replaceForbiddenLanguage(text: string): string {
+  let result = text;
+  for (const [pattern, replacement] of AI_BUZZWORD_REPLACEMENTS) {
+    result = result.replace(pattern, replacement);
+  }
+  // Clean up double spaces from empty replacements
+  return result.replace(/\s{2,}/g, ' ').trim();
+}
+
 function validateAndCleanResume(resume: BaseResume): BaseResume {
-  // Remove em dashes and en dashes, and normalize acronyms
   const cleanText = (text: string): string => {
-    return normalizeAcronyms(text.replace(/—/g, '-').replace(/–/g, '-'));
+    return normalizeAcronyms(
+      replaceForbiddenLanguage(
+        text
+          .replace(/—/g, '-')           // Em dash → hyphen
+          .replace(/–/g, '-')           // En dash → hyphen
+          .replace(/[\u201C\u201D]/g, '"')  // Smart double quotes → straight
+          .replace(/[\u2018\u2019]/g, "'")  // Smart single quotes → straight
+          .replace(/\u00A0/g, ' ')          // Non-breaking space → space
+          .replace(/\u2026/g, '...')        // Ellipsis char → three dots
+      )
+    );
   };
 
   return {

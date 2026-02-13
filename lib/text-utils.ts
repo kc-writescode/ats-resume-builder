@@ -69,9 +69,26 @@ export const ACRONYM_MAP: Record<string, string> = {
     'agile': 'Agile', 'scrum': 'Scrum', 'kanban': 'Kanban',
     'devops': 'DevOps', 'mlops': 'MLOps', 'dataops': 'DataOps',
 
+    // Security/Access Control
+    'rbac': 'RBAC', 'abac': 'ABAC', 'iam': 'IAM', 'sso': 'SSO',
+    'ldap': 'LDAP', 'saml': 'SAML', 'mfa': 'MFA', 'vpn': 'VPN',
+    'siem': 'SIEM', 'ids': 'IDS', 'ips': 'IPS',
+
     // Compliance
     'hipaa': 'HIPAA', 'gdpr': 'GDPR', 'soc2': 'SOC2', 'soc 2': 'SOC 2',
-    'pci': 'PCI', 'sox': 'SOX',
+    'pci': 'PCI', 'sox': 'SOX', 'pci-dss': 'PCI-DSS', 'nist': 'NIST',
+    'iso': 'ISO', 'fedramp': 'FedRAMP',
+
+    // Pharma/Regulatory
+    'fda': 'FDA', 'gmp': 'GMP', 'cgmp': 'cGMP', 'ich': 'ICH',
+    'capa': 'CAPA', 'ema': 'EMA',
+
+    // Finance
+    'gaap': 'GAAP', 'ifrs': 'IFRS', 'ebitda': 'EBITDA',
+
+    // General
+    'erp': 'ERP', 'crm': 'CRM', 'hris': 'HRIS', 'edi': 'EDI',
+    'rpa': 'RPA', 'bpm': 'BPM', 'qa': 'QA', 'qc': 'QC',
 };
 
 /**

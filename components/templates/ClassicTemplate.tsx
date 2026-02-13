@@ -8,9 +8,11 @@ interface TemplateProps {
   editable?: boolean;
   onFieldChange?: (path: string, value: string | string[]) => void;
   templateId?: string;
+  onDeleteBullet?: (sectionPath: string, bulletIndex: number) => void;
+  onDeleteEntry?: (sectionType: 'experience' | 'projects', entryIndex: number) => void;
 }
 
-export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 'classic' }: TemplateProps) {
+export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 'classic', onDeleteBullet, onDeleteEntry }: TemplateProps) {
   const template = getTemplate(templateId);
 
   // Use skill categories if available, otherwise use flat skills
@@ -41,6 +43,7 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
     } : {};
 
   const editableStyle = editable ? { outline: 'none', cursor: 'text' } : {};
+  const ec = editable ? 'editable-field' : '';
 
   // Section header style - full width underline
   const sectionHeaderStyle = {
@@ -71,6 +74,7 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
       {/* Header - Centered */}
       <div style={{ textAlign: 'center', marginBottom: '8pt' }}>
         <h1
+          className={ec}
           style={{
             fontFamily: template.fonts.heading,
             fontSize: '16pt',
@@ -93,15 +97,15 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
           gap: '12pt',
           flexWrap: 'wrap'
         }}>
-          <span style={editableStyle} {...editableProps('personal.location')}>{resume.personal.location}</span>
+          <span className={ec} style={editableStyle} {...editableProps('personal.location')}>{resume.personal.location}</span>
           <span style={{ color: template.colors.primary }}>•</span>
-          <span style={editableStyle} {...editableProps('personal.phone')}>{resume.personal.phone}</span>
+          <span className={ec} style={editableStyle} {...editableProps('personal.phone')}>{resume.personal.phone}</span>
           <span style={{ color: template.colors.primary }}>•</span>
-          <span style={editableStyle} {...editableProps('personal.email')}>{resume.personal.email}</span>
+          <span className={ec} style={editableStyle} {...editableProps('personal.email')}>{resume.personal.email}</span>
           {resume.personal.linkedin && (
             <>
               <span style={{ color: template.colors.primary }}>•</span>
-              <span style={editableStyle} {...editableProps('personal.linkedin')}>{resume.personal.linkedin}</span>
+              <span className={ec} style={editableStyle} {...editableProps('personal.linkedin')}>{resume.personal.linkedin}</span>
             </>
           )}
         </div>
@@ -114,6 +118,7 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
         <div style={{ marginBottom: '8pt' }}>
           <h2 style={sectionHeaderStyle}>Professional Summary</h2>
           <div
+            className={ec}
             style={{
               textAlign: 'justify',
               lineHeight: '1.3',
@@ -130,6 +135,7 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
         <div style={{ marginBottom: '8pt' }}>
           <h2 style={sectionHeaderStyle}>Core Competencies</h2>
           <p
+            className={ec}
             style={{
               fontSize: '10pt',
               fontWeight: '500',
@@ -155,6 +161,7 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
                 <tr key={idx} style={{ verticalAlign: 'baseline' }}>
                   <td style={{ width: '140pt', padding: '1pt 0' }}>
                     <strong
+                      className={ec}
                       style={{
                         fontFamily: template.fonts.heading,
                         fontSize: '9pt',
@@ -168,6 +175,7 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
                   </td>
                   <td style={{ padding: '1pt 0 1pt 8pt' }}>
                     <span
+                      className={ec}
                       style={{
                         fontSize: '9pt',
                         display: 'block',
@@ -185,6 +193,7 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
           </table>
         ) : (
           <p
+            className={ec}
             style={{ textAlign: 'justify', fontSize: '9pt', ...editableStyle }}
             {...editableProps('skills')}
           >
@@ -197,10 +206,22 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
       <div style={{ marginBottom: '6pt' }}>
         <h2 style={sectionHeaderStyle}>Professional Experience</h2>
         {resume.experience.map((exp, expIndex) => (
-          <div key={exp.id} style={{ marginBottom: '6pt' }}>
+          <div key={exp.id} className={editable ? 'group/entry relative' : ''} style={{ marginBottom: '6pt' }}>
+            {/* Delete entry button */}
+            {editable && resume.experience.length > 1 && (
+              <button
+                onClick={() => onDeleteEntry?.('experience', expIndex)}
+                className="absolute -right-1 -top-1 w-5 h-5 rounded-full bg-red-100 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center opacity-0 group-hover/entry:opacity-100 transition-fast z-10 border border-red-200 hover:border-red-500"
+                style={{ fontSize: '10px', lineHeight: 1 }}
+                title="Delete this entry"
+              >
+                &#10005;
+              </button>
+            )}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
               <div>
                 <span
+                  className={ec}
                   style={{ fontWeight: 'bold', color: template.colors.primary, ...editableStyle }}
                   {...editableProps(`experience.${expIndex}.title`)}
                 >
@@ -208,6 +229,7 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
                 </span>
                 <span> | </span>
                 <span
+                  className={ec}
                   style={editableStyle}
                   {...editableProps(`experience.${expIndex}.company`)}
                 >
@@ -215,37 +237,64 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
                 </span>
               </div>
               <div style={{ fontSize: '9pt', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
-                <span style={editableStyle} {...editableProps(`experience.${expIndex}.startDate`)}>
+                <span className={ec} style={editableStyle} {...editableProps(`experience.${expIndex}.startDate`)}>
                   {exp.startDate}
                 </span>
                 {' - '}
-                <span style={editableStyle} {...editableProps(`experience.${expIndex}.endDate`)}>
+                <span className={ec} style={editableStyle} {...editableProps(`experience.${expIndex}.endDate`)}>
                   {exp.endDate}
                 </span>
               </div>
             </div>
             {(exp.location || editable) && (
               <p
+                className={ec}
                 style={{ fontSize: '9pt', fontStyle: 'italic', marginBottom: '2pt', color: exp.location ? undefined : '#999', ...editableStyle }}
                 {...editableProps(`experience.${expIndex}.location`)}
               >
                 {exp.location || (editable ? 'Add location' : '')}
               </p>
             )}
-            <ul style={{ marginLeft: '14pt', marginTop: '1pt', paddingLeft: '0', listStyleType: 'disc' }}>
+            <ul style={{ marginLeft: editable ? '0' : '14pt', marginTop: '1pt', paddingLeft: editable ? '0' : '0', listStyleType: editable ? 'none' : 'disc' }}>
               {exp.bullets.map((bullet, bulletIndex) => (
                 <li
                   key={`${exp.id}-bullet-${bulletIndex}`}
-                  style={{ marginBottom: '1pt', textAlign: 'justify', ...editableStyle }}
-                  {...editableHtmlProps(`experience.${expIndex}.bullets.${bulletIndex}`)}
-                  dangerouslySetInnerHTML={{ __html: bullet }}
-                />
+                  className={editable ? 'group/bullet' : ''}
+                  style={{ marginBottom: '1pt', textAlign: 'justify', listStyleType: editable ? 'none' : undefined }}
+                >
+                  {editable ? (
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+                      <span style={{ userSelect: 'none', flexShrink: 0, marginTop: '1px', marginLeft: '14pt' }}>&#8226;</span>
+                      <div
+                        className={ec}
+                        style={{ flex: 1, ...editableStyle }}
+                        {...editableHtmlProps(`experience.${expIndex}.bullets.${bulletIndex}`)}
+                        dangerouslySetInnerHTML={{ __html: bullet }}
+                      />
+                      {exp.bullets.length > 1 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteBullet?.(`experience.${expIndex}.bullets`, bulletIndex);
+                          }}
+                          className="flex-shrink-0 w-4 h-4 rounded-full bg-red-100 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center opacity-0 group-hover/bullet:opacity-100 transition-fast"
+                          style={{ fontSize: '9px', lineHeight: 1, marginTop: '2px' }}
+                          title="Delete bullet"
+                        >
+                          &#10005;
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <span dangerouslySetInnerHTML={{ __html: bullet }} />
+                  )}
+                </li>
               ))}
             </ul>
             {editable && (
               <button
                 onClick={() => onFieldChange?.(`experience.${expIndex}.bullets`, [...exp.bullets, 'New achievement...'])}
-                style={{ color: '#2563eb', fontSize: '9pt', marginTop: '2pt', background: 'none', border: 'none', cursor: 'pointer' }}
+                style={{ color: '#2563eb', fontSize: '9pt', marginTop: '2pt', marginLeft: '14pt', background: 'none', border: 'none', cursor: 'pointer' }}
               >
                 + Add bullet
               </button>
@@ -261,6 +310,7 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
           <div key={edu.id} style={{ marginBottom: '4pt' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '3pt' }}>
               <span
+                className={ec}
                 style={{ fontWeight: 'bold', color: template.colors.primary, ...editableStyle }}
                 {...editableProps(`education.${eduIndex}.degree`)}
               >
@@ -268,6 +318,7 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
               </span>
               {(edu.graduationDate || editable) && (
                 <span
+                  className={ec}
                   style={{ fontSize: '9pt', fontWeight: 'bold', color: edu.graduationDate ? undefined : '#999', ...editableStyle }}
                   {...editableProps(`education.${eduIndex}.graduationDate`)}
                 >
@@ -276,13 +327,13 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
               )}
             </div>
             <p>
-              <span style={editableStyle} {...editableProps(`education.${eduIndex}.institution`)}>
+              <span className={ec} style={editableStyle} {...editableProps(`education.${eduIndex}.institution`)}>
                 {edu.institution}
               </span>
               {edu.gpa && (
                 <>
                   {' | GPA: '}
-                  <span style={editableStyle} {...editableProps(`education.${eduIndex}.gpa`)}>
+                  <span className={ec} style={editableStyle} {...editableProps(`education.${eduIndex}.gpa`)}>
                     {edu.gpa}
                   </span>
                 </>
@@ -297,10 +348,22 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
         <div style={{ marginBottom: '6pt' }}>
           <h2 style={sectionHeaderStyle}>Projects</h2>
           {resume.projects.map((proj, projIndex) => (
-            <div key={proj.id} style={{ marginBottom: '6pt' }}>
+            <div key={proj.id} className={editable ? 'group/entry relative' : ''} style={{ marginBottom: '6pt' }}>
+              {/* Delete entry button */}
+              {editable && resume.projects!.length > 1 && (
+                <button
+                  onClick={() => onDeleteEntry?.('projects', projIndex)}
+                  className="absolute -right-1 -top-1 w-5 h-5 rounded-full bg-red-100 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center opacity-0 group-hover/entry:opacity-100 transition-fast z-10 border border-red-200 hover:border-red-500"
+                  style={{ fontSize: '10px', lineHeight: 1 }}
+                  title="Delete this entry"
+                >
+                  &#10005;
+                </button>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <div>
                   <span
+                    className={ec}
                     style={{ fontWeight: 'bold', color: template.colors.primary, ...editableStyle }}
                     {...editableProps(`projects.${projIndex}.name`)}
                   >
@@ -310,6 +373,7 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
                     <>
                       <span> | </span>
                       <span
+                        className={ec}
                         style={{ fontSize: '9pt', ...editableStyle }}
                         {...editableProps(`projects.${projIndex}.link`)}
                       >
@@ -320,36 +384,63 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
                 </div>
                 {(proj.startDate || proj.endDate) && (
                   <div style={{ fontSize: '9pt', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
-                    <span style={editableStyle} {...editableProps(`projects.${projIndex}.startDate`)}>
+                    <span className={ec} style={editableStyle} {...editableProps(`projects.${projIndex}.startDate`)}>
                       {proj.startDate}
                     </span>
                     {proj.startDate && proj.endDate && ' - '}
-                    <span style={editableStyle} {...editableProps(`projects.${projIndex}.endDate`)}>
+                    <span className={ec} style={editableStyle} {...editableProps(`projects.${projIndex}.endDate`)}>
                       {proj.endDate}
                     </span>
                   </div>
                 )}
               </div>
               <p
+                className={ec}
                 style={{ fontSize: '9pt', fontStyle: 'italic', marginBottom: '2pt', ...editableStyle }}
                 {...editableProps(`projects.${projIndex}.description`)}
               >
                 {proj.description}
               </p>
-              <ul style={{ marginLeft: '14pt', marginTop: '1pt', paddingLeft: '0', listStyleType: 'disc' }}>
+              <ul style={{ marginLeft: editable ? '0' : '14pt', marginTop: '1pt', paddingLeft: editable ? '0' : '0', listStyleType: editable ? 'none' : 'disc' }}>
                 {proj.bullets.map((bullet, bulletIndex) => (
                   <li
                     key={`${proj.id}-bullet-${bulletIndex}`}
-                    style={{ marginBottom: '1pt', textAlign: 'justify', ...editableStyle }}
-                    {...editableHtmlProps(`projects.${projIndex}.bullets.${bulletIndex}`)}
-                    dangerouslySetInnerHTML={{ __html: bullet }}
-                  />
+                    className={editable ? 'group/bullet' : ''}
+                    style={{ marginBottom: '1pt', textAlign: 'justify', listStyleType: editable ? 'none' : undefined }}
+                  >
+                    {editable ? (
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+                        <span style={{ userSelect: 'none', flexShrink: 0, marginTop: '1px', marginLeft: '14pt' }}>&#8226;</span>
+                        <div
+                          className={ec}
+                          style={{ flex: 1, ...editableStyle }}
+                          {...editableHtmlProps(`projects.${projIndex}.bullets.${bulletIndex}`)}
+                          dangerouslySetInnerHTML={{ __html: bullet }}
+                        />
+                        {proj.bullets.length > 1 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteBullet?.(`projects.${projIndex}.bullets`, bulletIndex);
+                            }}
+                            className="flex-shrink-0 w-4 h-4 rounded-full bg-red-100 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center opacity-0 group-hover/bullet:opacity-100 transition-fast"
+                            style={{ fontSize: '9px', lineHeight: 1, marginTop: '2px' }}
+                            title="Delete bullet"
+                          >
+                            &#10005;
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <span dangerouslySetInnerHTML={{ __html: bullet }} />
+                    )}
+                  </li>
                 ))}
               </ul>
               {editable && (
                 <button
                   onClick={() => onFieldChange?.(`projects.${projIndex}.bullets`, [...proj.bullets, 'New project highlight...'])}
-                  style={{ color: '#2563eb', fontSize: '9pt', marginTop: '2pt', background: 'none', border: 'none', cursor: 'pointer' }}
+                  style={{ color: '#2563eb', fontSize: '9pt', marginTop: '2pt', marginLeft: '14pt', background: 'none', border: 'none', cursor: 'pointer' }}
                 >
                   + Add bullet
                 </button>
@@ -367,6 +458,7 @@ export function ClassicTemplate({ resume, editable, onFieldChange, templateId = 
             {resume.certifications.map((cert, index) => (
               <li
                 key={index}
+                className={ec}
                 style={{ marginBottom: '1pt', ...editableStyle }}
                 {...editableProps(`certifications.${index}`)}
               >

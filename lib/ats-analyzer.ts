@@ -39,7 +39,9 @@ export function analyzeKeywords(
     if (lower.length < 4) return false; // No 2-3 char fragments as competencies
     if (/^(the|and|or|for|with|from|into|this|that|have|has|will|can|may|must|should)$/i.test(lower)) return false;
     // Filter soft skills and generic terms - these are NOT core competencies
-    if (/^(communication|leadership|teamwork|collaborat|problem|analysis|thinking|creative|flexible|time|detail|self|motivated|hard|soft|skill|innovation|creativity|adaptability|resilience|integrity|professionalism|accountability|ownership|initiative|proactive|organized|mentoring|coaching|negotiation|presentation|influence|persuasion|diplomacy|empathy|patience)/i.test(lower)) return false;
+    // Use word boundary match anywhere in the string so "verbal communication" is caught by "communication"
+    const softSkillTerms = /\b(communication|leadership|teamwork|collaborat\w*|problem.?solving|analytical\s*thinking|creative|flexibility|flexible|time\s*management|detail.?oriented|self.?motivated|interpersonal|verbal|written|oral|soft\s*skill|innovation|creativity|adaptability|resilience|integrity|professionalism|accountability|ownership|initiative|proactive|organized|mentoring|coaching|negotiation|presentation|influence|persuasion|diplomacy|empathy|patience|multitask\w*|prioriti\w*|critical\s*thinking|decision.?making|conflict\s*resolution|emotional\s*intelligence|work\s*ethic|relationship\s*building|stakeholder\s*engagement)\b/i;
+    if (softSkillTerms.test(lower)) return false;
     // Filter generic tools and vague terms
     if (['development', 'programming', 'coding', 'software', 'excel', 'word', 'powerpoint', 'outlook', 'manufacturing', 'automation', 'safety', 'maintenance', 'reliability', 'environmental', 'diversity', 'inclusion', 'procurement', 'logistics', 'operations', 'compensation', 'qualification', 'recruiting', 'benefits'].includes(lower)) return false;
     return true;

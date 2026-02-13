@@ -3,17 +3,19 @@
 import { BaseResume, JobDescription } from '@/types/resume';
 
 // High-impact action verbs to bold in bullets
+// High-impact action verbs to bold in bullets
+// NOTE: Do NOT include AI-flagged buzzwords (orchestrated, pioneered, spearheaded, championed)
 const impactVerbs = [
   'achieved', 'accelerated', 'accomplished', 'administered', 'advanced',
-  'boosted', 'built', 'championed', 'collaborated', 'consolidated',
+  'automated', 'boosted', 'built', 'collaborated', 'consolidated',
   'created', 'decreased', 'delivered', 'designed', 'developed',
   'directed', 'drove', 'eliminated', 'engineered', 'enhanced',
   'established', 'exceeded', 'executed', 'expanded', 'generated',
   'grew', 'implemented', 'improved', 'increased', 'initiated',
-  'introduced', 'launched', 'led', 'managed', 'maximized',
-  'mentored', 'negotiated', 'optimized', 'orchestrated', 'outperformed',
-  'pioneered', 'produced', 'reduced', 'reengineered', 'restructured',
-  'revamped', 'scaled', 'simplified', 'spearheaded', 'streamlined',
+  'integrated', 'introduced', 'launched', 'led', 'managed', 'maximized',
+  'mentored', 'negotiated', 'optimized', 'outperformed',
+  'produced', 'reduced', 'reengineered', 'restructured',
+  'revamped', 'resolved', 'scaled', 'simplified', 'standardized', 'streamlined',
   'strengthened', 'succeeded', 'surpassed', 'transformed', 'tripled'
 ];
 

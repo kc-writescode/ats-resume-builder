@@ -248,6 +248,24 @@ body {
   -webkit-backdrop-filter: blur(12px);
 }
 
+/* Editable field indicators (resume edit mode) */
+.editable-field {
+  outline: none;
+  cursor: text;
+  border-radius: 2px;
+  transition: box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.editable-field:hover {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+  background-color: rgba(59, 130, 246, 0.03);
+}
+
+.editable-field:focus {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

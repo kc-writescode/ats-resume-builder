@@ -7,6 +7,8 @@ export interface TemplateComponentProps {
   resume: BaseResume;
   editable?: boolean;
   onFieldChange?: (path: string, value: string | string[]) => void;
+  onDeleteBullet?: (sectionPath: string, bulletIndex: number) => void;
+  onDeleteEntry?: (sectionType: 'experience' | 'projects', entryIndex: number) => void;
 }
 
 // All templates now use the same base component with different styling via templateId
