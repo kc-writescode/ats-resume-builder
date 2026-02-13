@@ -25,6 +25,25 @@ export function ReviewTab({ resume, onExport, onEdit }: ReviewTabProps) {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const isUndoing = useRef(false);
 
+  // Scale resume to fit container
+  const resumeContainerRef = useRef<HTMLDivElement>(null);
+  const [resumeScale, setResumeScale] = useState(1);
+
+  useEffect(() => {
+    const container = resumeContainerRef.current;
+    if (!container) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const containerWidth = entry.contentRect.width;
+        const resumeWidth = 816; // 8.5in in px
+        const scale = Math.min(1, containerWidth / resumeWidth);
+        setResumeScale(scale);
+      }
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
   const jobDescription = extractKeywordsFromJobDescription(resume.jobDescription);
   const atsScore = analyzeATSCompatibility(resume.content, jobDescription);
 
@@ -250,27 +269,34 @@ export function ReviewTab({ resume, onExport, onEdit }: ReviewTabProps) {
       {/* Two-Column Layout */}
       <div className="flex flex-col xl:flex-row gap-6 pt-6 px-1">
         {/* Left Column: Resume Editor */}
-        <div className="xl:w-[65%] min-w-0">
+        <div className="xl:w-[65%] min-w-0" ref={resumeContainerRef}>
           {/* Bold Toolbar for Edit Mode */}
           <BoldToolbar enabled={editMode} />
 
-          {/* Resume Preview */}
-          <div
-            id="printable-resume"
-            className={`bg-white border rounded-xl shadow-sm overflow-hidden transition-all duration-300 ${
-              editMode
-                ? 'border-blue-300 ring-2 ring-blue-100'
-                : 'border-gray-200'
-            }`}
-            style={{ width: '100%', maxWidth: '8.5in', margin: '0 auto' }}
-          >
-            <TemplateComponent
-              resume={resume.content}
-              editable={editMode}
-              onFieldChange={handleFieldChange}
-              onDeleteBullet={handleDeleteBullet}
-              onDeleteEntry={handleDeleteEntry}
-            />
+          {/* Resume Preview — scaled to fit column */}
+          <div style={{ overflow: 'hidden' }}>
+            <div
+              id="printable-resume"
+              className={`bg-white border rounded-xl shadow-sm overflow-hidden transition-all duration-300 ${
+                editMode
+                  ? 'border-blue-300 ring-2 ring-blue-100'
+                  : 'border-gray-200'
+              }`}
+              style={{
+                width: '8.5in',
+                transformOrigin: 'top left',
+                transform: resumeScale < 1 ? `scale(${resumeScale})` : undefined,
+                marginBottom: resumeScale < 1 ? `calc((${resumeScale} - 1) * 100%)` : undefined,
+              }}
+            >
+              <TemplateComponent
+                resume={resume.content}
+                editable={editMode}
+                onFieldChange={handleFieldChange}
+                onDeleteBullet={handleDeleteBullet}
+                onDeleteEntry={handleDeleteEntry}
+              />
+            </div>
           </div>
         </div>
 
@@ -342,26 +368,6 @@ export function ReviewTab({ resume, onExport, onEdit }: ReviewTabProps) {
               ))}
             </div>
 
-            {atsScore.suggestions.length > 0 && (
-              <div className="bg-white rounded-lg p-3 border border-gray-100">
-                <p className="font-medium text-gray-900 mb-2 text-sm flex items-center gap-1.5">
-                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                  </svg>
-                  Quick Wins
-                </p>
-                <ul className="space-y-1.5">
-                  {atsScore.suggestions.map((suggestion, index) => (
-                    <li key={index} className="text-xs text-gray-700 flex items-start gap-2 bg-slate-50 rounded-lg p-2">
-                      <span className="flex-shrink-0 w-4 h-4 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold mt-0.5">
-                        {index + 1}
-                      </span>
-                      <span>{suggestion}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
           </div>
 
           {/* AI Detection Resistance Panel */}

@@ -1134,7 +1134,11 @@ function validateAndCleanResume(resume: BaseResume): BaseResume {
       ...exp,
       title: cleanText(exp.title),
       company: cleanText(exp.company),
-      bullets: exp.bullets.map(cleanText)
+      bullets: exp.bullets.map(b => {
+        const cleaned = cleanText(b);
+        // Ensure bullet starts with uppercase (handles lowercase first char from AI)
+        return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+      })
     })),
     education: resume.education.map(edu => ({
       ...edu,
