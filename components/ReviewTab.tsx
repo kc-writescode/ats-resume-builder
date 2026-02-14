@@ -5,7 +5,6 @@ import { GeneratedResume, BaseResume } from '@/types/resume';
 import { analyzeATSCompatibility, extractKeywordsFromJobDescription, analyzeKeywords, analyzeHumanWritingPatterns } from '@/lib/ats-analyzer';
 import { getTemplateComponent } from './templates';
 import { BoldToolbar } from './BoldToolbar';
-import { KeywordInsights } from './KeywordInsights';
 
 interface ReviewTabProps {
   resume: GeneratedResume;
@@ -535,10 +534,6 @@ export function ReviewTab({ resume, onExport, onEdit }: ReviewTabProps) {
             )}
           </div>
 
-          {/* Keyword Optimization Insights */}
-          {resume.content.keywordInsights && resume.content.keywordInsights.length > 0 && (
-            <KeywordInsights insights={resume.content.keywordInsights} />
-          )}
         </div>
       </div>
     </div>

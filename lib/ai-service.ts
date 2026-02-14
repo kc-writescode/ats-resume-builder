@@ -124,7 +124,7 @@ Accelerated, Consolidated, Transformed, Launched, Resolved, Standardized, Evalua
 - Summary: 3-4 keywords naturally integrated
 - Experience: distribute different keywords across roles, concentrate on most recent role
 - Skills/Core Competencies: the only place where listing keywords without narrative context is acceptable
-- Track placements in keywordInsights array
+- Focus on natural placement, not tracking
 
 **ANTI-PATTERNS TO AVOID**:
 - WRONG: Repeating "data analysis" in 4 different bullets across roles
@@ -204,14 +204,7 @@ Return ONLY valid JSON:
   "skillCategories": [{"category": "...", "skills": ["..."]}],
   "education": [...],
   "projects": [...],
-  "certifications": [...],
-  "keywordInsights": [
-    {
-      "keyword": "The keyword from JD",
-      "section": "Experience: [Company Name]",
-      "context": "The exact bullet or phrase where used"
-    }
-  ]
+  "certifications": [...]
 }
 
 CRITICAL REMINDER: Your output will be REJECTED if:
@@ -481,7 +474,6 @@ ${softSkills.length > 0 ? `**SOFT SKILLS FROM JD (demonstrate through actions in
 **ROLE TYPE:** ${roleType} — use the matching industry transformation example from system prompt.
 Follow ALL system prompt rules for bullet points, keywords, core competencies, skills, and summary.
 Organize skills into: ${skillCategories}
-Provide keywordInsights showing where each keyword was placed.
 Return complete valid JSON. Bullets 80-150 chars each. Preserve ALL original bullet count.`;
 
   try {
@@ -491,7 +483,7 @@ Return complete valid JSON. Bullets 80-150 chars each. Preserve ALL original bul
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        max_tokens: 6000,
+        max_tokens: 4500,
         system: SYSTEM_PROMPT,
         messages: [
           {
@@ -746,7 +738,6 @@ Return complete valid JSON. Bullets 80-150 chars each. Preserve ALL original bul
         };
       }),
       certifications: tailoredData.certifications || baseResume.certifications,
-      keywordInsights: tailoredData.keywordInsights || []
     };
 
     return validateAndCleanResume(tailoredResume);
@@ -796,7 +787,6 @@ ${softSkills.length > 0 ? `**SOFT SKILLS FROM JD (demonstrate through actions in
 **ROLE TYPE:** ${roleType} — use the matching industry transformation example from system prompt.
 Follow ALL system prompt rules for bullet points, keywords, core competencies, skills, and summary.
 Organize skills into: ${skillCategories}
-Provide keywordInsights showing where each keyword was placed.
 Return complete valid JSON. Bullets 80-150 chars each. Preserve ALL original bullet count.`;
 
   try {
@@ -808,7 +798,7 @@ Return complete valid JSON. Bullets 80-150 chars each. Preserve ALL original bul
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        max_tokens: 6000,
+        max_tokens: 4500,
         system: SYSTEM_PROMPT,
         messages: [
           {
@@ -1063,7 +1053,6 @@ Return complete valid JSON. Bullets 80-150 chars each. Preserve ALL original bul
         };
       }),
       certifications: tailoredData.certifications || baseResume.certifications,
-      keywordInsights: tailoredData.keywordInsights || []
     };
 
     onProgress?.({ percentage: 100, stage: 'Complete!' });
@@ -1152,12 +1141,6 @@ function validateAndCleanResume(resume: BaseResume): BaseResume {
       skills: cat.skills.map(cleanText)
     })),
     certifications: resume.certifications.map(cleanText),
-    keywordInsights: resume.keywordInsights?.map(insight => ({
-      ...insight,
-      keyword: cleanText(insight.keyword),
-      section: cleanText(insight.section),
-      context: cleanText(insight.context)
-    }))
   };
 }
 
